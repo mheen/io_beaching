@@ -2,6 +2,7 @@ dirs.json
 *.log
 .vscode/*
 *.nc
+!input/*.nc
 temp_*
 test_*
 
