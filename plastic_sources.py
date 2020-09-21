@@ -19,6 +19,20 @@ class RiverSources:
         self.waste_min = waste_min
         self.waste_max = waste_max
 
+    def convert_for_parcels_constant(self,time):
+        waste = np.round(self.waste)
+        constant_waste = np.nanmean(waste,axis=1)
+        lon0 = []
+        lat0 = []
+        time0 = []
+        source_points = np.where(constant_waste != 0)[0]
+        for p in source_points:
+            n_particles = constant_waste[p]
+            lon0 = np.append(lon0,np.repeat(self.lon[p],n_particles))
+            lat0 = np.append(lon0,np.repeat(self.lon[p],n_particles))
+            time0 = np.append(time0,np.repeat(time,n_particles))
+        return lon0,lat0,time0
+
     def convert_for_parcels_per_time(self,t,time):
         waste = np.round(self.waste)
         lon0 = []
