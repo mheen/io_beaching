@@ -1,4 +1,4 @@
-from geopy.distance import vincenty
+from geopy.distance import geodesic
 from datetime import datetime,timedelta
 import numpy as np
 import json
@@ -8,7 +8,7 @@ import os
 # General
 # -----------------------------------------------
 def get_dir(dirname,json_file='input/dirs.json'):
-    with open('dirs.json','r') as f:
+    with open(json_file,'r') as f:
         all_dirs = json.load(f)
     return all_dirs[dirname]
 
@@ -123,7 +123,7 @@ def convert_datetime_to_time(time_org,time_units='seconds',time_origin=datetime(
 def get_distance_between_points(lon1,lat1,lon2,lat2):
     pos1 = (lat1,lon1)
     pos2 = (lat2,lon2)
-    distance = vincenty(pos2,pos1).meters
+    distance = geodesic(pos2,pos1).meters
     return distance
 
 def convert_lon_360_to_180(lon):
