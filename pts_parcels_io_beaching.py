@@ -1,4 +1,4 @@
-from parcels import FieldSet, ParticleSet, JITParticle, AdvectionRK4, BrownianMotion2D, SpatiallyVaryingBrownianMotion2D, Field, Variable, ErrorCode
+from parcels import FieldSet, ParticleSet, JITParticle, AdvectionRK4, DiffusionUniformKh, Field, Variable, ErrorCode
 from pts_parcels_kernels import wrap_lon_180, delete_particle
 from plastic_sources import RiverSources
 from utilities import get_dir, get_daily_ncfiles_in_time_range, get_closest_index, convert_time_to_datetime
@@ -118,7 +118,7 @@ def run_hycom_subset_monthly_release(input_dir,output_dir,output_name,
     run_time = timedelta(days=(end_date-start_date).days)
     dt = timedelta(hours=1)
     output_interval = 24    
-    kernel = pset.Kernel(AdvectionRK4) + SpatiallyVaryingBrownianMotion2D #+ wrap_lon_180
+    kernel = pset.Kernel(AdvectionRK4) + pset.Kernel(DiffusionUniformKh)
     output_file = pset.ParticleFile(name=output_path,outputdt=dt*output_interval)
     pset.execute(kernel,runtime=run_time,dt=dt,output_file=output_file,verbose_progress=True,
                  recovery={ErrorCode.ErrorOutOfBounds: delete_particle})
