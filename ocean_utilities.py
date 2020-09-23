@@ -253,7 +253,7 @@ class LandMask:
         else:
             raise ValueError('Error getting '+i_type+' indices: '+i_type+'='+str(i)+',n='+str(n)) 
 
-    def plot(self,plot_mplstyle='input/plot.mplstyle'):
+    def plot(self,plot_mplstyle='plot_tools/plot.mplstyle'):
         plt.style.use(plot_mplstyle)
         fig = plt.figure()
         ax = plt.gca(projection=ccrs.PlateCarree())

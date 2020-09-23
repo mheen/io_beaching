@@ -73,7 +73,7 @@ class RestartParticles:
         self.time0 = np.repeat(time0,len(self.lon0))
 
     def plot(self,lon_range=[0.,130.],lat_range=[-56.,40.],
-                plot_mplstyle='input/plot.mplstyle'):
+                plot_mplstyle='plot_tools/plot.mplstyle'):
         plt.style.use(plot_mplstyle)
         fig = plt.figure()
         ax = plt.gca(projection=ccrs.PlateCarree())

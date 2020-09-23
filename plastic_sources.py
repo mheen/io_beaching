@@ -80,7 +80,7 @@ class RiverSources:
 
     def plot_org_and_moved(self,lon_range=[20.,130.],lat_range=[-40.,40.],
                            land_mask=LandMask.read_from_netcdf('input/hycom_landmask.nc'),
-                           plot_mplstyle='input/plot.mplstyle'):
+                           plot_mplstyle='plot_tools/plot.mplstyle'):
         original = self.read_from_shapefile()
         plt.style.use(plot_mplstyle)
         fig = plt.figure()
@@ -110,7 +110,7 @@ class RiverSources:
         plt.show()
 
     def plot(self,t=0,lon_range=None,lat_range=None,
-             plot_mplstyle='input/plot.mplstyle',
+             plot_mplstyle='plot_tools/plot.mplstyle',
              land_mask=LandMask.read_from_netcdf('input/hycom_landmask.nc')):
         plastic = np.round(self.waste[:,0])
         plastic[plastic==0] = np.nan
