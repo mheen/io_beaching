@@ -29,7 +29,7 @@ class RiverSources:
         for p in source_points:
             n_particles = constant_waste[p]
             lon0 = np.append(lon0,np.repeat(self.lon[p],n_particles))
-            lat0 = np.append(lon0,np.repeat(self.lon[p],n_particles))
+            lat0 = np.append(lat0,np.repeat(self.lat[p],n_particles))
             time0 = np.append(time0,np.repeat(time,n_particles))
         return lon0,lat0,time0
 

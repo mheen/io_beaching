@@ -19,7 +19,8 @@ class IORiverParticles:
         self.time0 = time0
 
     @staticmethod
-    def get_from_netcdf(start_date,constant_release=False,input_path='input/PlasticRiverSources_Lebreton2017_Hycom.nc'):
+    def get_from_netcdf(start_date,constant_release=False,
+                        input_path='input/PlasticRiverSources_Lebreton2017_Hycom.nc'):
         global_sources = RiverSources.read_from_netcdf(input_path=input_path)
         io_sources = global_sources.get_riversources_from_ocean_basin('io')
         year = start_date.year
