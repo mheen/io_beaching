@@ -72,7 +72,12 @@ def get_l_time_range(time,start_time,end_time):
 
 def convert_time_to_datetime(time_org,time_units):
     time = []
-    i_start_time = time_units.index('since')+len('since')+1
+    if 'since' in time_units:   
+        i_start_time = time_units.index('since')+len('since')+1
+    elif 'after' in time_units:
+        i_start_time = time_units.index('after')+len('after')+1
+    else:
+        raise ValueError('Unknown time units: "since" or "after" not found in units.')
     if 'T' in time_units: # YYYY-mm-ddTHH:MM format used by Parcels
         i_end_time = i_start_time+len('YYYY-mm-ddTHH:MM')
         base_time = datetime.strptime(time_units[i_start_time:i_end_time],'%Y-%m-%dT%H:%M')
