@@ -8,6 +8,9 @@ import cartopy.crs as ccrs
 import cartopy.feature as cftr
 from netCDF4 import Dataset
 
+# -----------------------------------------------
+# Classes
+# -----------------------------------------------
 class OceanBasins:
     def __init__(self):
         self.basin = []
@@ -51,6 +54,20 @@ class OceanBasin:
     def __init__(self,name,polygon):
         self.name = name
         self.polygon = polygon
+
+class OceanBasinGrid:
+    def __init__(self,basin_name,dx,lon_range=None,lat_range=None):        
+        self.basin_name = basin_name
+        if lon_range is None:
+            lon_range = [-180,180]
+        if lat_range is None:
+            lat_range = [-90,90]
+        self.grid = Grid(dx,lon_range,lat_range)
+        lon,lat = np.meshgrid(self.grid.lon,self.grid.lat)
+        self.in_basin = np.ones(lon.shape).astype('bool')
+        ocean_basins = OceanBasins.read_from_shapefile()
+        for i in range(lon.shape[0]):            
+            self.in_basin[i,:] = ocean_basins.determine_if_point_in_basin(basin_name,lon[i,:],lat[i,:])
 
 class Grid:
     def __init__(self,dx,lon_range,lat_range,dy=None,periodic=False):
@@ -298,3 +315,14 @@ class LandMask:
             u = data['u'][:].filled()
         mask = np.isnan(u).astype('int')
         return LandMask(lon,lat,mask)
+
+# -----------------------------------------------
+# Functions
+# -----------------------------------------------
+def get_io_lon_lat_range():
+    lon_range = [0.,130.]
+    lat_range = [-50.,40.]
+    return lon_range,lat_range
+
+def get_global_grid(dx=1):
+    return Grid(dx,[-180,180],[-90,90],periodic=True)
