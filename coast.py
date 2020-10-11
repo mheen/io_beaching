@@ -6,6 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 from netCDF4 import Dataset
+import os
+
+gshhg_distance_url = 'ftp://ftp.soest.hawaii.edu/gshhg/dist_to_GSHHG_v2.3.7_1m.nc'
 
 class CoastDistance:
     def __init__(self,grid,distance):
@@ -39,6 +42,8 @@ class CoastDistance:
 
     @staticmethod
     def read_from_netcdf(input_path='input/dist_to_GSHHG_v2.3.7_1m.nc'):
+        if not os.path.exists(input_path):
+            wget.download(gshhg_distance_url,out=input_path)
         data = Dataset(input_path)
         lat = data['lat'][:].filled(fill_value=np.nan)
         lon360 = data['lon'][:].filled(fill_value=np.nan)
