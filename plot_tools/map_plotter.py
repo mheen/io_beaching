@@ -87,6 +87,9 @@ class MapPlot:
             c.set_clim(self.cbar_lim[0],self.cbar_lim[1])
         return c,cbar
 
+    def add_annotation(self,lons,lats,texts):
+        self.ax.annotate(texts,(lons,lats))
+
     def _draw_grid(self,nlon=10,nlat=10,xmarkers='bottom',ymarkers='left'):
         lon_formatter = cticker.LongitudeFormatter()
         lat_formatter = cticker.LatitudeFormatter()
