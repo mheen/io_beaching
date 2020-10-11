@@ -5,6 +5,8 @@ dirs.json
 !input/*.nc
 temp_*
 test_*
+input/dist_to_GSHHG_v2.3.7_1m.nc
+*.p
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
