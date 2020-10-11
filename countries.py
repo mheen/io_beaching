@@ -111,7 +111,7 @@ class CountriesGridded:
         country_codes = np.empty((len(lon_index)))*np.nan
         for i in range(len(lon_index)):
             if ~np.isnan(lon_index[i]):
-                country_codes[i] = get_mat_or_nan(self.countries,lat_index[i],lon_index[i])
+                country_codes[i] = get_matrix_value_or_nan(self.countries,lat_index[i],lon_index[i])
         return country_codes
 
     def get_country_name(self,code):
