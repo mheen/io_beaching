@@ -27,7 +27,7 @@ legend.edgecolor : 0.0
 legend.borderaxespad : 0.0
 figure.dpi : 100
 figure.subplot.wspace : 0.2
-figure.subplot.hspace : 0.2
+figure.subplot.hspace : 0.1
 savefig.format : pdf
 savefig.bbox : tight
 xtick.direction : in
