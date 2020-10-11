@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cftr
 from netCDF4 import Dataset
+import log
 
 # -----------------------------------------------
 # Classes
@@ -110,6 +111,17 @@ class Grid:
         l_index_lat_under = lat_index<0
         lat_index[l_index_lat_under] = np.nan        
         return (lon_index,lat_index)
+
+    @staticmethod
+    def get_from_lon_lat_array(lon,lat):
+        dx = np.round(np.unique(np.diff(lon))[0],2)
+        dy = np.round(np.unique(np.diff(lat))[0],2)
+        lon_range = [np.nanmin(lon),np.nanmax(lon)]
+        lat_range = [np.nanmin(lat),np.nanmax(lat)]        
+        log.warning(None,f'dx ({np.unique(np.diff(lon))[0]}) to create Grid rounded to 2 decimals: dx = {dx}')
+        if dy != dx:
+            log.warning(None,f'dy ({np.unique(np.diff(lat))[0]}) to create Grid rounded to 2 decimals: dy = {dy}')
+        return Grid(dx,lon_range,lat_range,dy=dy)
 
 class IrregularGrid:
     def __init__(self,lon,lat):
