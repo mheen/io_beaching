@@ -3,6 +3,7 @@ from datetime import datetime,timedelta
 import numpy as np
 import json
 import os
+import csv
 
 # -----------------------------------------------
 # General
@@ -38,6 +39,17 @@ def get_closest_index(A,target):
     right = A[idx]
     idx -= target-left < right-target
     return idx
+
+def write_data_to_csv(data,output_path):
+    with open(output_path,'w') as f:
+        writer = csv.writer(f,quoting=csv.QUOTE_MINIMAL)
+        for row in data:
+            writer.writerow(row)
+
+def get_matrix_value_or_nan(matrix,i,j):
+        if np.isnan(i):
+            return np.nan
+        return matrix[i.astype('int'),j.astype('int')]
 
 # -----------------------------------------------
 # Timeseries
