@@ -172,8 +172,8 @@ def process_particles(input_description='io_river_sources',
 
 if __name__ == '__main__':
     basin_names = ['io_nh','io_sh']
-    dx = 8
-    ps = [0.05,0.5,0.95]
+    dx,_ = get_defaults()
+    ps = get_probabilities()
     for basin_name in basin_names:
         particles = process_particles(basin_name=basin_name)
         process_density(particles,basin_name=basin_name)
