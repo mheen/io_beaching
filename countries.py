@@ -216,6 +216,13 @@ class Countries:
         for country in shpreader.Reader(shp_countries).records():
             self.countries.append(country)
 
+def get_cgrid_with_halo_and_extended_islands(halosize=5):
+    cgrid = CountriesGridded.read_from_netcdf()
+    cgrid_halo = cgrid.get_countriesgridded_with_halo(halosize=cgrid_halosize)
+    cgrid_halo.extend_maldives_cocos()
+    cgrid_halo.split_india_west_east()
+    return cgrid_halo
+
 if __name__ == '__main__':
     cgrid = CountriesGridded.create_country_grid()
     cgrid.pickle()
