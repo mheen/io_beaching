@@ -46,6 +46,14 @@ def write_data_to_csv(data,output_path):
         for row in data:
             writer.writerow(row)
 
+def read_data_from_csv(input_path):
+    data = []
+    with open(input_path,'r') as f:
+        reader = csv.reader(f,delimiter=',')
+        for row in reader:
+            data.append(row)
+    return data
+
 def get_matrix_value_or_nan(matrix,i,j):
         if np.isnan(i):
             return np.nan
