@@ -296,17 +296,27 @@ class BeachingParticles():
             beached[p_stuck_first[p],t_stuck_first[p]:] = 2
         return (lon,lat,beached)
 
+    def get_initial_particle_lon_lat(self):
+        i_all,j_all = np.where(~np.isnan(self.lon))
+        i_first,i_sort = np.unique(i_all,return_index=True)
+        j_first = j_all[i_sort]
+        lon = self.lon[i_first,j_first]
+        lat = self.lat[i_first,j_first]
+        return lon,lat
+
+    def get_final_particle_lon_lat(self):
+        warnings.warn('Locations of final time available in BeachingParticles being used to determine'+
+                      ' final particle basin. This is not the same as the final time for each particle!')
+        lon = self.lon[:,-1]
+        lat = self.lat[:,-1]
+        return lon,lat
+
     def get_particles_from_basin_at_time_index(self,basin_name,t,dx):
         if t == 'initial': # need to find first time separately for each particle (because they are added during simulation)
-            i_all,j_all = np.where(~np.isnan(self.lon))
-            i_first,i_sort = np.unique(i_all,return_index=True)
-            j_first = j_all[i_sort]
-            lon = self.lon[i_first,j_first]
-            lat = self.lat[i_first,j_first]
+            lon,lat = self.get_initial_particle_lon_lat()
+        elif t == -1:
+            lon,lat = self.get_final_particle_lon_lat()
         else:
-            if t == -1:
-                warnings.warn('Locations of final time available in BeachingParticles being used to determine'+
-                              ' final particle basin. This is not the same as the final time for each particle!')
             lon = self.lon[:,t]
             lat = self.lat[:,t]
         basin = OceanBasinGrid(basin_name,dx)
