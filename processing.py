@@ -109,7 +109,7 @@ def _get_particles_path(basin_name,extra_description=None,
                                             dir_description=dir_description)
     return particles_path
 
-def _get_beached_particles_path(basin_name,dx,p,
+def get_beached_particles_path(basin_name,dx,p,
                                 extra_description=None,
                                 dir_description='pts_processed'):
     beached_particles_path = _get_beaching_path(basin_name,dx,p,'beached',
@@ -124,7 +124,7 @@ def _get_density_path(basin_name,extra_description=None,
                                           dir_description=dir_description)
     return density_path
 
-def _get_beached_density_path(basin_name,dx,p,extra_description=None,
+def get_beached_density_path(basin_name,dx,p,extra_description=None,
                               dir_description='pts_processed'):
     beached_density_path = _get_beaching_path(basin_name,dx,p,'density',
                                               extra_description=extra_description,
@@ -134,7 +134,7 @@ def _get_beached_density_path(basin_name,dx,p,extra_description=None,
 def process_beached_density(particles,dx,p,basin_name='io_nh',dx_grid=0.5,
                             output_description=None):
     grid = get_global_grid(dx=dx_grid)
-    output_path = _get_beached_density_path(basin_name,dx,p,extra_description=output_description)
+    output_path = get_beached_density_path(basin_name,dx,p,extra_description=output_description)
     density = Density.create_from_particles(grid,particles)
     _write_density_to_netcdf(density,output_path)
 
@@ -146,7 +146,7 @@ def process_density(particles,basin_name='io_nh',dx_grid=0.5,output_description=
 
 def process_beached_particles(particles,dx,p,basin_name='io_nh',output_description=None):
     beached_particles = particles.get_beachingparticles_at_distance_dx_with_probability(dx,p)
-    output_path = _get_beached_particles_path(basin_name,dx,p,extra_description=output_description)
+    output_path = get_beached_particles_path(basin_name,dx,p,extra_description=output_description)
     _write_to_netcdf(beached_particles,output_path)
     return beached_particles
 
