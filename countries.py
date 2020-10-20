@@ -165,12 +165,6 @@ class CountriesGridded:
         nc_countries[:] = self.countries        
         nc.close()
 
-    def pickle(self,output_path='input/countries_gridded_dx01.p'):
-        log.info(None,f'Saving gridded countries information to pickle: {output_path}')
-        save_dict = {'grid' : self.grid,'codes_names' : self.codes_names,'countries' : self.countries}
-        with open(output_path,'wb') as f:
-            pickle.dump(save_dict,f)
-
     @staticmethod
     def read_from_netcdf(input_path='input/countries_gridded_dx01.nc'):
         log.info(None,f'Reading gridded countries information from netcdf: {input_path}')
@@ -182,16 +176,6 @@ class CountriesGridded:
         country_codes = list(netcdf['country_codes'][:])
         codes_names = dict(zip(country_codes,country_names))
         countries = netcdf['countries'][:].filled(fill_value=np.nan)
-        return CountriesGridded(grid,codes_names,countries)
-
-    @staticmethod
-    def read_from_pickle(input_path='input/countries_gridded_dx01.p'):
-        log.info(None,f'Reading gridded countries information from pickle: {input_path}')
-        with open(input_path,'rb') as f:
-            data = pickle.load(f)
-        grid = data['grid']
-        codes_names = data['codes_names']
-        countries = data['countries']
         return CountriesGridded(grid,codes_names,countries)
 
     @staticmethod
