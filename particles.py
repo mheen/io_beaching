@@ -159,9 +159,9 @@ class BeachingParticles():
         s = self.beached[:,t] == 2 # stuck during simulation
         ax = plt.gca(projection=ccrs.PlateCarree())
         mplot = MapPlot(ax,lon_range=None,lat_range=None,title=title)
-        mplot.points(self.lon[:,t],self.lat[:,t],color='#000000')        
-        mplot.points(self.lon[b,t],self.lat[b,t],color='#cc0000')
-        mplot.points(self.lon[s,t],self.lat[s,t],color='#0000cc')
+        mplot.points(self.lon[:,t],self.lat[:,t],facecolor='#000000')        
+        mplot.points(self.lon[b,t],self.lat[b,t],facecolor='#cc0000')
+        mplot.points(self.lon[s,t],self.lat[s,t],facecolor='#0000cc')
 
     def _single_plot_io(self,fig,req_time):
         lon_range,lat_range = get_io_lon_lat_range()        
@@ -171,9 +171,9 @@ class BeachingParticles():
         s = self.beached[:,t] == 2 # stuck during simulation
         ax = plt.gca(projection=ccrs.PlateCarree())
         mplot = MapPlot(ax,lon_range=lon_range,lat_range=lat_range,title=title)
-        mplot.points(self.lon[:,t],self.lat[:,t],color='#000000')
-        mplot.points(self.lon[b,t],self.lat[b,t],color='#cc0000')
-        mplot.points(self.lon[s,t],self.lat[s,t],color='#0000cc')
+        mplot.points(self.lon[:,t],self.lat[:,t],facecolor='#000000')
+        mplot.points(self.lon[b,t],self.lat[b,t],facecolor='#cc0000')
+        mplot.points(self.lon[s,t],self.lat[s,t],facecolor='#0000cc')
 
     def _beaching_probability(self,dx,probability):
         distance_to_coast = self._get_distance_to_coast(0)
