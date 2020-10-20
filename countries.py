@@ -218,7 +218,7 @@ class Countries:
 
 def get_cgrid_with_halo_and_extended_islands(halosize=5):
     cgrid = CountriesGridded.read_from_netcdf()
-    cgrid_halo = cgrid.get_countriesgridded_with_halo(halosize=cgrid_halosize)
+    cgrid_halo = cgrid.get_countriesgridded_with_halo(halosize=halosize)
     cgrid_halo.extend_maldives_cocos()
     cgrid_halo.split_india_west_east()
     return cgrid_halo
