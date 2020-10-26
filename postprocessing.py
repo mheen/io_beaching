@@ -130,10 +130,11 @@ class ParticlesPerCountry:
         countries = []
         particles_per_country = []
         for i in range(len(data)):
-            countries.append(data[i][0])
+            country = (data[i][0]).replace("['","").replace("']","")
+            countries.append(country)
             particles_per_country.append(data[i][1])
-        countries = np.array(countries)
-        particles_per_country = np.array(particles_per_country)
+        countries = np.array(countries)        
+        particles_per_country = np.array(particles_per_country).astype(float)
         return ParticlesPerCountry(countries,particles_per_country)
 
 class IoParticleDevelopmentTimeseries:
