@@ -64,8 +64,8 @@ class MapPlot:
         self.ax.add_geometries(c_geometry,ccrs.PlateCarree(),zorder=3,
                                facecolor=facecolor,edgecolor=edgecolor)
 
-    def points(self,lon,lat,facecolor='k',edgecolor='k',marker='.',markersize=3):
-        p = self.ax.scatter(lon,lat,marker=marker,s=markersize,facecolor=facecolor,
+    def points(self,lon,lat,facecolor='k',edgecolor='k',marker='.',markersize=3,edgewidth=None):
+        p = self.ax.scatter(lon,lat,marker=marker,s=markersize,facecolor=facecolor,linewidth=edgewidth,
                             edgecolor=edgecolor,transform=ccrs.PlateCarree(),zorder=5)
         return p
 
@@ -84,16 +84,18 @@ class MapPlot:
 
     def pcolormesh(self,lon,lat,z,show_cbar=True,ranges=[1,10,100,10**3,10**4,10**5,10**6],cmap='Reds'):
         xx,yy = np.meshgrid(lon,lat)
+        zz = np.copy(z)
+        zz[zz == 0] = np.nan
         if ranges is not None:
             if cmap == 'RedBlue':
                 colors = get_colormap_reds_blues(len(ranges))
             colors = get_colormap_reds(len(ranges))
             cm = LinearSegmentedColormap.from_list('cm_log_density',colors,N=len(ranges))
             norm = BoundaryNorm(ranges,ncolors=6)
-            c = self.ax.pcolormesh(xx,yy,z,cmap=cm,norm=norm,transform=ccrs.PlateCarree(),zorder=1)            
+            c = self.ax.pcolormesh(xx,yy,zz,cmap=cm,norm=norm,transform=ccrs.PlateCarree(),zorder=1)            
             self.set_cbar_items(ticks=ranges,lim=[ranges[0],ranges[-1]])
         else:
-            c = self.ax.pcolormesh(xx,y,z,cmap=cmap,transform=ccrs.PlateCarree(),zorder=1)
+            c = self.ax.pcolormesh(xx,yy,zz,cmap=cmap,transform=ccrs.PlateCarree(),zorder=1)
         if len(self.cbar_lim) is not 0:
                 c.set_clim(self.cbar_lim[0],self.cbar_lim[1])
         if show_cbar:

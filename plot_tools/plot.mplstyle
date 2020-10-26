@@ -1,8 +1,8 @@
 font.family : times new roman
-font.size : 10
+font.size : 8
 axes.titlepad : 3
-axes.titlesize : 10
-axes.labelsize : 10
+axes.titlesize : 8
+axes.labelsize : 8
 axes.linewidth : 0.8
 axes.labelweight : 100
 figure.titleweight : 100
@@ -25,9 +25,9 @@ legend.fancybox : False
 legend.loc : upper right
 legend.edgecolor : 0.0
 legend.borderaxespad : 0.0
-figure.dpi : 100
+figure.dpi : 300
 figure.subplot.wspace : 0.2
-figure.subplot.hspace : 0.1
+figure.subplot.hspace : 0.2
 savefig.format : pdf
 savefig.bbox : tight
 xtick.direction : in
