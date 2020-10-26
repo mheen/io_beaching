@@ -217,7 +217,8 @@ class IoParticleDevelopmentTimeseries:
     def read_from_netcdf(input_path):
         log.info(None,f'Reading Indian Ocean particle development timeseries from netcdf: {input_path}')
         netcdf = Dataset(input_path)
-        time = netcdf['time'][:].filled(fill_value=np.nan)
+        time_org = netcdf['time'][:].filled(fill_value=np.nan)
+        time = convert_time_to_datetime(time_org,netcdf['time'].units)
         total_particles = netcdf['total_particles'][:].filled(fill_value=np.nan)
         ocean_nio = netcdf['ocean_nio'][:].filled(fill_value=np.nan)
         ocean_sio = netcdf['ocean_sio'][:].filled(fill_value=np.nan)
