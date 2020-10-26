@@ -117,7 +117,7 @@ def get_beached_particles_path(basin_name,dx,p,
                                                 dir_description=dir_description)
     return beached_particles_path
 
-def _get_density_path(basin_name,extra_description=None,
+def get_density_path(basin_name,extra_description=None,
                       dir_description='pts_processed'):
     density_path = _get_non_beaching_path(basin_name,'density',
                                           extra_description=extra_description,
@@ -140,7 +140,7 @@ def process_beached_density(particles,dx,p,basin_name='io_nh',dx_grid=0.5,
 
 def process_density(particles,basin_name='io_nh',dx_grid=0.5,output_description=None):
     grid = get_global_grid(dx=dx_grid)
-    output_path = _get_density_path(basin_name,extra_description=output_description)
+    output_path = get_density_path(basin_name,extra_description=output_description)
     density = Density.create_from_particles(grid,particles)
     _write_density_to_netcdf(density,output_path)
 
