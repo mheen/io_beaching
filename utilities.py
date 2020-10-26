@@ -140,7 +140,7 @@ def convert_datetime_to_time(time_org,time_units='seconds',time_origin=datetime(
         raise ValueError('Unknown time units requested fro time conversion from datetime.')
     for t in time_org:        
         time.append((t-time_origin).total_seconds()/conversion)
-    return np.array(time)
+    return np.array(time), f'{time_units} since {time_origin.strftime("%Y-%m-%d")}'
 
 # -----------------------------------------------
 # Coordinates
