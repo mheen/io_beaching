@@ -62,7 +62,7 @@ class MapPlot:
         else:
             c_geometry = country.geometry
         self.ax.add_geometries(c_geometry,ccrs.PlateCarree(),zorder=3,
-                               facecolor=facecolor,edgecolor=edgecolor)
+                               facecolor=facecolor,edgecolor=edgecolor,linewidth=0.25)
 
     def points(self,lon,lat,facecolor='k',edgecolor='k',marker='.',markersize=3,edgewidth=None):
         p = self.ax.scatter(lon,lat,marker=marker,s=markersize,facecolor=facecolor,linewidth=edgewidth,
@@ -128,10 +128,10 @@ class MapPlot:
         x1 = self.lon_range[1]
         y0 = self.lat_range[0]
         y1 = self.lat_range[1]
-        self.lines([x0,x0],[y0,y1],color='k',linewidth=0.5)
-        self.lines([x0,x1],[y1,y1],color='k',linewidth=0.5)
-        self.lines([x0,x1],[y0,y0],color='k',linewidth=0.5)
-        self.lines([x1,x1],[y0,y1],color='k',linewidth=0.5)
+        self.lines([x0,x0],[y0,y1],color='k',linewidth=0.25)
+        self.lines([x0,x1],[y1,y1],color='k',linewidth=0.25)
+        self.lines([x0,x1],[y0,y0],color='k',linewidth=0.25)
+        self.lines([x1,x1],[y0,y1],color='k',linewidth=0.25)
 
     def _draw_grid(self,nlon=10,nlat=10):
         lon_formatter = cticker.LongitudeFormatter()

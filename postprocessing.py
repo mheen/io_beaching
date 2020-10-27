@@ -28,6 +28,19 @@ class ConnectivityMatrix:
         self.end_countries = end_countries
         self.blame_matrix = blame_matrix
 
+    def return_matrix_for_requested_countries(self,requested_countries):
+        requested_matrix = np.empty((len(requested_countries),len(requested_countries)))*np.nan
+        for n,country in enumerate(requested_countries):
+            i = self.end_countries.index(country)
+            js = np.where(self.blame_matrix[:,i] > 1)[0]
+            if len(js) >= 1:
+                for j in js:
+                    if self.start_countries[j] in requested_countries:
+                        m = requested_countries.index(self.start_countries[j])
+                        requested_matrix[n,m] = self.blame_matrix[j,i]
+        requested_matrix[requested_matrix < 1] = np.nan
+        return requested_matrix
+
     def write_to_csv(self,output_path):
         log.info(None,f'Writing connectivity matrix to csv file: {output_path}')
         csv_data = []
