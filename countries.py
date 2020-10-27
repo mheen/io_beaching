@@ -5,7 +5,6 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 import numpy as np
 from netCDF4 import Dataset
-import pickle
 from plot_tools.map_plotter import MapPlot
 import cartopy.crs as ccrs
 import log
@@ -225,4 +224,4 @@ def get_cgrid_with_halo_and_extended_islands(halosize=5):
 
 if __name__ == '__main__':
     cgrid = CountriesGridded.create_country_grid()
-    cgrid.pickle()
+    cgrid.write_to_netcdf()
