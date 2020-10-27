@@ -7,6 +7,7 @@ temp_*
 test_*
 input/dist_to_GSHHG_v2.3.7_1m.nc
 *.p
+!input/example_dirs.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
