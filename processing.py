@@ -102,7 +102,7 @@ def _get_beaching_path(basin_name,dx,p,description,
         beached_path = f'{processed_dir}{basin_name}_{description}_{dx}km_p{p_str}_{extra_description}.nc'
     return beached_path
 
-def _get_particles_path(basin_name,extra_description=None,
+def get_particles_path(basin_name,extra_description=None,
                         dir_description='pts_processed'):
     particles_path = _get_non_beaching_path(basin_name,'particles',
                                             extra_description=extra_description,
@@ -166,7 +166,7 @@ def process_particles(input_description='io_river_sources',
     log.info(None,f'Extracting particles from initial basin only: {basin_name}')
     basin_particles = particles.get_particles_from_initial_basin(basin_name)
     # write to netcdf
-    output_path = _get_particles_path(basin_name,extra_description=output_description)
+    output_path = get_particles_path(basin_name,extra_description=output_description)
     _write_to_netcdf(basin_particles,output_path)
     return basin_particles
 

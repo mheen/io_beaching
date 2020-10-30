@@ -1,4 +1,5 @@
 dirs.json
+*.png
 *.log
 .vscode/*
 *.nc
