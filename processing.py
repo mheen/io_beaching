@@ -62,9 +62,9 @@ def _write_to_netcdf(particles,output_path):
     nc_beached = nc.createVariable('beached',float,('pid','time'),zlib=True)
     # write variables
     nc_pid[:] = particles.pid
-    time = convert_datetime_to_time(particles.time)
+    time, time_units = convert_datetime_to_time(particles.time)
     nc_time[:] = time
-    nc_time.units = 'seconds after 1995-01-01T12:00'
+    nc_time.units = time_units
     nc_lon[:] = particles.lon
     nc_lat[:] = particles.lat
     nc_beached[:] = particles.beached
