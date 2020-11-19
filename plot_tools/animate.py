@@ -17,9 +17,9 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
                              lon_range=None,lat_range=None,title_style='time_passed',
                              plot_legend=False,plot_style='plot_tools/plot.mplstyle',
                              add_uwa_logo=False,logo_extent=None,
+                             text=None,text_lon=None,text_lat=None,
                              dpi=100,fps=25):    
-    writer = 'imagemagick'
-    writer = animation.writers['ffmpeg'](fps=fps,codec='libx264',bitrate=-1,extra_args=['-pix_fmt', 'yuv420p'])
+    writer = animation.PillowWriter(fps=fps)
     if lon_range is None:
         lon_range, _ = get_io_lon_lat_range()
     if lat_range is None:
@@ -43,16 +43,19 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
     if add_uwa_logo:
         im = image.imread('input/uwa_logo.png')        
         ax.imshow(im, aspect=1, extent = logo_extent, transform=ccrs.PlateCarree(), zorder=10)
+    if text is not None:
+        ax.text(text_lon,text_lat,text,transform=ccrs.PlateCarree(),ha='center',
+                bbox=dict(facecolor='w', alpha=0.3, edgecolor='w',pad=1),zorder=11)
     # animated points
-    point_o = ax.plot([],[],'.',markersize=1.,color='#000000')[0]
-    point_b = ax.plot([],[],'.',markersize=1.,color='#EA5622')[0]
+    point_o = ax.plot([],[],marker='o',color='k',markersize=0.4,linestyle=None,linewidth=0)[0]
+    point_b = ax.plot([],[],'.',markersize=0.4,color='#EA5622',fillstyle='full')[0]
     # animated text
-    ttl = ax.text(0.83,0.95,'',transform=ax.transAxes,ha='left',bbox=dict(facecolor='w', alpha=0.3, edgecolor='w',pad=3))
+    ttl = ax.text(0.97,0.92,'',transform=ax.transAxes,ha='right',bbox=dict(facecolor='w', alpha=0.3, edgecolor='w',pad=2))
     ttl.set_animated(True)
     
     def init():
         point_o.set_data([],[])
-        point_b.set_data([],[])        
+        point_b.set_data([],[])
         ttl.set_text('')
         return point_o,point_b,ttl
 
@@ -77,7 +80,7 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
 
     anim = animation.FuncAnimation(plt.gcf(),animate,init_func=init,frames=len(time),blit=True)
     if output_name is not None:
-        output_path = get_dir('animation_output')+output_name+'.mpeg'
+        output_path = get_dir('animation_output')+output_name+'.gif'
         anim.save(output_path,writer=writer)
     else:
         plt.show()
@@ -103,17 +106,14 @@ def io_beaching_animations():
         del(particles_nh,particles_sh,time,lon,lat,beached)
 
 def christmas_island_animation():
-    start_time = datetime(1995,1,1,12,0)
-    end_time = datetime(1996,1,1,12,0)    
-    particles = BeachingParticles.read_from_netcdf(get_particles_path('io_sh'),time_start=start_time,time_end=end_time)    
+    particles = BeachingParticles.read_from_netcdf(get_dir('christmas_island_input'))
 
-    lon_range = [105,110]
-    lat_range = [-11,-6]
+    lon_range = [100,115]
+    lat_range = [-12,-5]
     output_name = 'plastic_waste_christmas_island'
-    logo_extent = (lon_range[1]-0.9,lon_range[1]-0.1,lat_range[0]+0.2,lat_range[0]+0.8)
-    # ax.text(105.6,-10.8,'Christmas Island',transform=ccrs.PlateCarree(),ha='center',
-    #         bbox=dict(facecolor='w', alpha=0.3, edgecolor='w',pad=1),zorder=11)
+    logo_extent = (lon_range[1]-2,lon_range[1]-0.1,lat_range[0]+0.2,lat_range[0]+2)    
     create_animation_beached(particles.time,particles.lon,particles.lat,None,None,
                              output_name=output_name,lon_range=lon_range,lat_range=lat_range,
-                             dpi=300,fps=5,title_style='month',add_uwa_logo=True,logo_extent=logo_extent)
+                             text='Christmas Island',text_lon=105.6,text_lat=-11.,
+                             dpi=300,fps=2,title_style='month',add_uwa_logo=True,logo_extent=logo_extent)
     
