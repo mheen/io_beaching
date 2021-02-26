@@ -329,6 +329,18 @@ class BeachingParticles():
         beached = self.beached[l_basin,:]
         return BeachingParticles(pid,time,lon,lat,beached,self.t_interval)
 
+    def get_particles_from_initial_lon_lat_range(self, lon_range, lat_range):
+        lon0, lat0 = self.get_initial_particle_lon_lat()
+        l_lon = np.logical_and(lon_range[0]<=lon0, lon0<=lon_range[1])
+        l_lat = np.logical_and(lat_range[0]<=lat0, lat0<=lat_range[1])
+        l_range = np.logical_and(l_lon, l_lat)
+        pid = self.pid[l_range]
+        time = self.time
+        lon = self.lon[l_range, :]
+        lat = self.lat[l_range, :]
+        beached = self.beached[l_range, :]
+        return BeachingParticles(pid, time, lon, lat, beached, self.t_interval)
+
     def add_particles_from_parcels_netcdf(self,input_path,t_interval=5):
         log.info(None,f'Adding particles from: {input_path}')
         (_,time,lon,lat,beached) = self.get_data_from_parcels_netcdf(input_path,t_interval=t_interval)

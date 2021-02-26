@@ -170,6 +170,11 @@ def process_particles(input_description='io_river_sources',
     _write_to_netcdf(basin_particles,output_path)
     return basin_particles
 
+def process_specific_file_particles_in_lon_lat_range(input_path, output_path, lon_range, lat_range, t_interval=1):
+    particles = BeachingParticles.read_from_parcels_netcdf(input_path, t_interval=t_interval)
+    particles_in_range = particles.get_particles_from_initial_lon_lat_range(lon_range, lat_range)
+    _write_to_netcdf(particles_in_range, output_path)
+
 if __name__ == '__main__':
     basin_names = ['io_nh','io_sh']
     dx,_ = get_defaults()
