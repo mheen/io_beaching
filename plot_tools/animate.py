@@ -18,6 +18,7 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
                              plot_legend=False,plot_style='plot_tools/plot.mplstyle',
                              add_uwa_logo=False,logo_extent=None,
                              text=None,text_lon=None,text_lat=None,
+                             point=False,point_lon=None,point_lat=None,
                              dpi=100,fps=25):    
     writer = animation.PillowWriter(fps=fps)
     if lon_range is None:
@@ -44,8 +45,10 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
         im = image.imread('input/uwa_logo.png')        
         ax.imshow(im, aspect=1, extent = logo_extent, transform=ccrs.PlateCarree(), zorder=10)
     if text is not None:
-        ax.text(text_lon,text_lat,text,transform=ccrs.PlateCarree(),ha='center',
+        ax.text(text_lon,text_lat,text,transform=ccrs.PlateCarree(),ha='center',va='top',
                 bbox=dict(facecolor='w', alpha=0.3, edgecolor='w',pad=1),zorder=11)
+    if point is True:
+        ax.scatter(point_lon,point_lat,c='#C70039',s=1.8)
     # animated points
     point_o = ax.plot([],[],marker='o',color='k',markersize=0.4,linestyle=None,linewidth=0)[0]
     point_b = ax.plot([],[],'.',markersize=0.4,color='#EA5622',fillstyle='full')[0]
@@ -117,3 +120,14 @@ def christmas_island_animation():
                              text='Christmas Island',text_lon=105.6,text_lat=-11.,
                              dpi=300,fps=2,title_style='month',add_uwa_logo=True,logo_extent=logo_extent)
     
+def cocos_keeling_islands_animation():
+    particles = BeachingParticles.read_from_netcdf(get_dir('cki_input'))
+
+    lon_range = [90., 128.]
+    lat_range = [-20., 6.]
+    output_name = 'plastic_waste_cocos_keeling'
+    create_animation_beached(particles.time, particles.lon, particles.lat, None, None,
+                             output_name= output_name, lon_range=lon_range, lat_range=lat_range,
+                             text='Cocos Keeling\nIslands', text_lon=97., text_lat=-13.,
+                             point=True, point_lon=96.86, point_lat=-12.14,
+                             dpi=300, fps=2, title_style='month')
