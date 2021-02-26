@@ -66,21 +66,31 @@ class MapPlot:
 
     def points(self,lon,lat,facecolor='k',edgecolor='k',marker='.',markersize=3,edgewidth=None):
         p = self.ax.scatter(lon,lat,marker=marker,s=markersize,facecolor=facecolor,linewidth=edgewidth,
-                            edgecolor=edgecolor,transform=ccrs.PlateCarree(),zorder=5)
+                            edgecolor=edgecolor,transform=ccrs.PlateCarree(),zorder=6)
         return p
 
-    def tracks(self,lon,lat,color='#0000a0'):
+    def tracks(self,lon,lat,color='#0000a0',linewidth=1):
         # assuming lon and lat dimensions are [pid,time]
         for p in range(lon.shape[0]):
-            self.ax.plot(lon[p,:],lat[p,:],'.-',color=color,
-                                 transform=ccrs.PlateCarree(),zorder=5)
+            self.ax.plot(lon[p,:],lat[p,:],'-',color=color,linewidth=linewidth,
+                                 transform=ccrs.PlateCarree(),zorder=4)
 
     def fill(self,lon,lat,color='#3299cc'):
         self.ax.fill(lon,lat,color=color,transform=ccrs.PlateCarree(),zorder=3)
 
     def lines(self,lon,lat,linewidth=1.,color='#0000a0'):
         self.ax.plot(lon,lat,'-',color=color,linewidth=linewidth,
-                     transform=ccrs.PlateCarree(),zorder=4)
+                     transform=ccrs.PlateCarree(),zorder=6)
+
+    def box(self, lon_range, lat_range, linewidth=1., color='k'):
+        self.lines([lon_range[0], lon_range[1]], [lat_range[0], lat_range[0]],
+                   linewidth=linewidth, color=color)
+        self.lines([lon_range[1], lon_range[1]], [lat_range[0], lat_range[1]],
+                   linewidth=linewidth, color=color)
+        self.lines([lon_range[1], lon_range[0]], [lat_range[1], lat_range[1]],
+                   linewidth=linewidth, color=color)
+        self.lines([lon_range[0], lon_range[0]], [lat_range[1], lat_range[0]],
+                   linewidth=linewidth, color=color)
 
     def pcolormesh(self,lon,lat,z,show_cbar=True,ranges=[1,10,100,10**3,10**4,10**5,10**6],cmap='Reds'):
         xx,yy = np.meshgrid(lon,lat)
@@ -118,6 +128,7 @@ class MapPlot:
 
     def add_subtitle(self,subtitle,location='upper left'):
         anchored_text = AnchoredText(subtitle,loc=location,borderpad=0.0)
+        anchored_text.zorder = 15
         self.ax.add_artist(anchored_text)
 
     def add_annotation(self,lons,lats,texts):
