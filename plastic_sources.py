@@ -56,6 +56,17 @@ class RiverSources:
         waste_max = self.waste_max[l_in_basin,:]
         return RiverSources(lon,lat,self.time,waste,waste_min,waste_max)
 
+    def get_riversources_in_lon_lat_range(self, lon_range, lat_range):
+        l_lon = np.logical_and(lon_range[0]<=self.lon, self.lon<=lon_range[1])
+        l_lat = np.logical_and(lat_range[0]<=self.lat, self.lat<=lat_range[1])
+        l_range = np.logical_and(l_lon, l_lat)
+        lon = self.lon[l_range]
+        lat = self.lat[l_range]
+        waste = self.waste[l_range, :]
+        waste_min = self.waste_min[l_range, :]
+        waste_max = self.waste_max[l_range, :]
+        return RiverSources(lon, lat, self.time, waste, waste_min, waste_max)
+
     def move_sources_to_ocean(self,land_mask=LandMask.read_from_netcdf('input/hycom_landmask.nc'),
                               log_file='move_riversources_hycom_landmask.log'):
         lon = self.lon
