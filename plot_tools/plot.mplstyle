@@ -3,7 +3,7 @@ font.size : 4
 axes.titlepad : 3
 axes.titlesize : 4
 axes.labelsize : 4
-axes.linewidth : 0.8
+axes.linewidth : 0.5
 axes.labelweight : 100
 figure.titleweight : 100
 figure.figsize : 3, 4
