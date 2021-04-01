@@ -22,8 +22,18 @@ def get_cki_box_lon_lat_range():
     lat_range = [-12.3, -11.8]
     return (lon_range, lat_range)
 
-def get_l_particles_in_box(particles: BeachingParticles):
-    box_lon, box_lat = get_cki_box_lon_lat_range()
+def get_christmas_box_lon_lat_range():
+    lon_range = [105.4, 105.9]
+    lat_range = [-10.7, -10.2]
+    return (lon_range, lat_range)
+
+def get_l_particles_in_box(particles: BeachingParticles, iot_island):
+    if iot_island == 'cki':
+        box_lon, box_lat = get_cki_box_lon_lat_range()
+    elif iot_island == 'christmas':
+        box_lon, box_lat = get_christmas_box_lon_lat_range()
+    else:
+        raise ValueError(f'Unknown iot_island {iot_island}, valid options are: cki and christmas.')
     l_in_box = []
     for i in range(len(particles.pid)):
         l_lon = np.logical_and(box_lon[0]<=particles.lon[i, :], particles.lon[i, :]<=box_lon[1])
@@ -31,9 +41,14 @@ def get_l_particles_in_box(particles: BeachingParticles):
         l_in_box.append(np.logical_and(l_lon, l_lat).any())
     return np.array(l_in_box)
 
-def get_particle_entry_time_box(particles: BeachingParticles):
-    l_box = get_l_particles_in_box(particles)
-    box_lon, box_lat = get_cki_box_lon_lat_range()
+def get_particle_entry_time_box(particles: BeachingParticles, iot_island):
+    l_box = get_l_particles_in_box(particles, iot_island)
+    if iot_island == 'cki':
+        box_lon, box_lat = get_cki_box_lon_lat_range()
+    elif iot_island == 'christmas':
+        box_lon, box_lat = get_christmas_box_lon_lat_range()
+    else:
+        raise ValueError(f'Unknown iot_island {iot_island}, valid options are: cki and christmas.')
     i_box = np.where(l_box)[0]
     time_entry = []
     for i in i_box:
@@ -43,19 +58,19 @@ def get_particle_entry_time_box(particles: BeachingParticles):
         time_entry.append(particles.time[i_first])
     return np.array(time_entry)
 
-def get_particle_release_time_box(particles: BeachingParticles):
-    l_box = get_l_particles_in_box(particles)
+def get_particle_release_time_box(particles: BeachingParticles, iot_island):
+    l_box = get_l_particles_in_box(particles, iot_island)
     _, t_release = particles._get_release_time_and_particle_indices()
     time_release = particles.time[t_release[l_box]]
     return time_release
 
-def get_particle_release_locations_box(particles: BeachingParticles):
-    l_box = get_l_particles_in_box(particles)
+def get_particle_release_locations_box(particles: BeachingParticles, iot_island):
+    l_box = get_l_particles_in_box(particles, iot_island)
     lon0, lat0 = particles.get_initial_particle_lon_lat()
     return (lon0[l_box], lat0[l_box])
 
-def get_main_sources_lon_lat_n_particles(particles: BeachingParticles):
-    lon0, lat0 = get_particle_release_locations_box(particles)
+def get_main_sources_lon_lat_n_particles(particles: BeachingParticles, iot_island):
+    lon0, lat0 = get_particle_release_locations_box(particles, iot_island)
     coordinates0 = []
     for i in range(len(lon0)):
         coordinates0.append([lon0[i], lat0[i]])
@@ -74,10 +89,10 @@ def get_original_source_based_on_lon0_lat0(lon0, lat0):
     yearly_waste = np.sum(iot_sources.waste[i_sources], axis=1)
     return (lon, lat, yearly_waste)
 
-def get_n_particles_per_month_release_arrival(particles: BeachingParticles):
-    release_time = get_particle_release_time_box(particles)
+def get_n_particles_per_month_release_arrival(particles: BeachingParticles, iot_island):
+    release_time = get_particle_release_time_box(particles, iot_island)
     release_months = np.array([x.month for x in release_time])
-    entry_time = get_particle_entry_time_box(particles)
+    entry_time = get_particle_entry_time_box(particles, iot_island)
     entry_months = np.array([x.month for x in entry_time])
     months = np.arange(1,13,1)
     n_release = []
