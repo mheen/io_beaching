@@ -1,10 +1,10 @@
 from plot_tools.map_plotter import MapPlot, get_colormap_reds
 from plots_vanderMheen_et_al_2020 import _get_marker_colors_sizes_edgewidths_for_sources, _get_legend_entries_for_sources
-from plastic_sources import RiverSources
 from particles import BeachingParticles
 from utilities import get_dir
 from postprocessing_cki import get_l_particles_in_box, get_cki_box_lon_lat_range, get_n_particles_per_month_release_arrival
-from postprocessing_cki import get_particle_release_locations_box
+from postprocessing_cki import get_iot_lon_lat_range, get_iot_sources, get_main_sources_lon_lat_n_particles
+from postprocessing_cki import get_original_source_based_on_lon0_lat0
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.lines import Line2D
@@ -14,11 +14,6 @@ import cartopy.crs as ccrs
 import cartopy.feature as cftr
 import numpy as np
 from datetime import datetime
-
-def get_cki_lon_lat_range():
-    lon_range = [90., 128.]
-    lat_range = [-20., 6.]
-    return (lon_range, lat_range)
 
 def get_months_colors():
     colors = ['#ffedbc', '#fece6b', '#fdc374', '#fb9d59', '#f57547', '#d00d20',
@@ -32,15 +27,15 @@ def _logarithmic_colormap():
     norm = BoundaryNorm(ranges,ncolors=6)
     return colors,ranges,cm,norm
 
-def _cki_basic_map(ax, xmarkers='bottom', ymarkers='left', lon_range=None, lat_range=None):
+def _iot_basic_map(ax, xmarkers='bottom', ymarkers='left', lon_range=None, lat_range=None):
     if lon_range is None:
-        lon_range, _ = get_cki_lon_lat_range()
+        lon_range, _ = get_iot_lon_lat_range()
         meridians = [90, 100, 110, 120, 128]        
     else:
         dlon = 4
         meridians = np.arange(lon_range[0], lon_range[1]+dlon, dlon)
     if lat_range is None:
-        _, lat_range = get_cki_lon_lat_range()
+        _, lat_range = get_iot_lon_lat_range()
         parallels = [-20, -15, -10, -5, 0, 5]
     else:
         dlat = 2
@@ -49,52 +44,147 @@ def _cki_basic_map(ax, xmarkers='bottom', ymarkers='left', lon_range=None, lat_r
                     xmarkers=xmarkers, ymarkers=ymarkers)
     return mplot
 
-def particle_tracks(output_path=None, plot_style='plot_tools/plot.mplstyle'):
+def _main_source_info():
+    ranges = np.array([200., 100., 50., 25., 10., 5., 1.])
+    labels = ['> 100','50 - 100','25 - 50','10 - 25', '5 - 10','1 - 5']
+    colors = get_colormap_reds(len(ranges)-1)[::-1]
+    edge_widths = [0.7,0.7,0.7,0.5,0.5,0.5]
+    sizes = [6,5,4,3,2,1]
+    legend_sizes = [6,5,4,3,2,1]
+    return (ranges,labels,colors,edge_widths,sizes,legend_sizes)
+
+def _get_marker_colors_sizes_edgewidths_for_main_sources(waste_input):
+    (ranges,_,colors,edge_widths,sizes,_) = _main_source_info()
+    source_colors = []
+    source_sizes = []    
+    source_edge_widths = []
+    for waste in waste_input:
+        l_range = []
+        for i in range(len(colors)):
+            l_range.append(ranges[i] >= waste >= ranges[i+1])
+        i_range = np.where(l_range)[0][0]
+        source_colors.append(colors[i_range])
+        source_sizes.append(sizes[i_range])
+        source_edge_widths.append(edge_widths[i_range])
+    return source_colors,source_sizes,source_edge_widths
+
+def _get_legend_entries_for_main_sources():
+    (_,labels,colors,edge_widths,_,legend_sizes) = _main_source_info()
+    legend_entries = []
+    for i in range(len(colors)):
+        legend_entries.append(Line2D([0],[0],marker='o',color='w',markerfacecolor=colors[i],                              
+                              markersize=legend_sizes[i],label=labels[i],markeredgewidth=edge_widths[i]))
+    return legend_entries
+
+def particle_tracks_and_main_sources(river_names = [], ylim_rivers = [5, 210],
+                                     output_path=None, plot_style='plot_tools/plot.mplstyle'):
     particles = BeachingParticles.read_from_netcdf(get_dir('cki_input'))
     box_lon, box_lat = get_cki_box_lon_lat_range()
-    cki_lon, cki_lat = get_cki_lon_lat_range()
     l_box = get_l_particles_in_box(particles)
     plt.style.use(plot_style)
-    fig = plt.figure(figsize=(4,5))
-    ax = plt.gca(projection=ccrs.PlateCarree())
+    fig = plt.figure(figsize=(6,4))
+    plt.subplots_adjust(hspace=0.1)
+    land_color = '#cfcfcf'
+    # --- (a) tracks and all sources ---
+    ax1 = plt.subplot(2, 2, 1, projection=ccrs.PlateCarree())
     # tracks
-    mplot = _cki_basic_map(ax)
-    mplot.tracks(particles.lon[~l_box, :], particles.lat[~l_box, :], color='#626262', linewidth=0.2)
-    mplot.tracks(particles.lon[l_box, :], particles.lat[l_box, :], color='#A21E1E', linewidth=0.2)
-    mplot.box(box_lon, box_lat, linewidth=0.5)
-    ax.add_feature(cftr.LAND,facecolor='#cfcfcf',edgecolor='k',zorder=5)
+    not_in_box_color = '#626262'
+    in_box_color = '#A21E1E'
+    mplot1 = _iot_basic_map(ax1, xmarkers='off')
+    mplot1.ax.set_xticklabels([])
+    mplot1.tracks(particles.lon[~l_box, :], particles.lat[~l_box, :], color=not_in_box_color, linewidth=0.2)
+    mplot1.tracks(particles.lon[l_box, :], particles.lat[l_box, :], color=in_box_color, linewidth=0.2)
+    mplot1.box(box_lon, box_lat, linewidth=0.5)
+    ax1.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
     # sources
-    global_sources = RiverSources.read_from_netcdf()
-    io_sources = global_sources.get_riversources_from_ocean_basin('io')
-    cki_sources = io_sources.get_riversources_in_lon_lat_range(cki_lon, cki_lat)    
-    cki_yearly_waste = np.sum(cki_sources.waste,axis=1)
-    i_use = np.where(cki_yearly_waste >= 1)
-    cki_yearly_waste = cki_yearly_waste[i_use]
-    lon_sources = cki_sources.lon[i_use]
-    lat_sources = cki_sources.lat[i_use]
+    iot_sources = get_iot_sources()
+    iot_yearly_waste = np.sum(iot_sources.waste,axis=1)
+    i_use = np.where(iot_yearly_waste >= 1)
+    iot_yearly_waste = iot_yearly_waste[i_use]
+    lon_sources = iot_sources.lon[i_use]
+    lat_sources = iot_sources.lat[i_use]
     (source_colors,
     source_sizes,
-    source_edgewidths) = _get_marker_colors_sizes_edgewidths_for_sources(cki_yearly_waste)    
-    mplot.points(lon_sources,lat_sources,marker='o',facecolor=source_colors,
-                  markersize=source_sizes,edgewidth=source_edgewidths)    
-    # sources legend
+    source_edgewidths) = _get_marker_colors_sizes_edgewidths_for_sources(iot_yearly_waste)
+    mplot1.points(lon_sources,lat_sources,marker='o',facecolor=source_colors,
+                  markersize=np.array(source_sizes),edgewidth=source_edgewidths)    
+    # legends
     legend_entries = _get_legend_entries_for_sources()
-    ax.set_anchor('W')
-    ax.legend(handles=legend_entries, title='Plastic sources\n[tonnes year$^{-1}$]', loc='upper right',
-              bbox_to_anchor=(1.0, 1.0))
+    ax1.set_anchor('W')
+    legend1 = plt.legend(handles=legend_entries, title='Plastic sources\n[tonnes/year]', loc='upper right',
+                         bbox_to_anchor=(1.0, 1.0))
+    ax1.add_artist(legend1)
+    legend_entries_tracks = [Line2D([0], [0], color=in_box_color, label='Reach CKI'),
+                             Line2D([0], [0], color=not_in_box_color, label='Do not reach CKI')]
+    ax1.legend(handles=legend_entries_tracks, loc='lower right', bbox_to_anchor=(1.0, 0.0))
     # title
-    mplot.add_subtitle('Particle tracks around Cocos Keeling Islands (2008)')
+    mplot1.add_subtitle('(a) Particle tracks around Cocos Keeling Islands (CKI)')
+    # --- (b) main sources ---
+    ax2 = plt.subplot(2, 2, 3, projection=ccrs.PlateCarree())
+    mplot2 = _iot_basic_map(ax2)
+    lon_main_sources, lat_main_sources, waste_main_sources = get_main_sources_lon_lat_n_particles(particles)
+    (main_source_colors,
+    main_source_sizes,
+    main_source_edgewidths) = _get_marker_colors_sizes_edgewidths_for_main_sources(waste_main_sources)
+    mplot2.points(lon_main_sources, lat_main_sources, marker='o', facecolor=main_source_colors,
+                 markersize=np.array(main_source_sizes)*5, edgewidth=main_source_edgewidths)
+    mplot2.box(box_lon, box_lat, linewidth=0.5)
+    ax2.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
+    # legend
+    legend_entries_main = _get_legend_entries_for_main_sources()
+    ax2.set_anchor('W')
+    ax2.legend(handles=legend_entries_main, title='Main sources\n[# particles]', loc='upper right',
+                bbox_to_anchor=(1.0, 1.0))
+    # title
+    mplot2.add_subtitle('(b) Source locations of particles reaching CKI')
+    # --- (c) histogram rivers ---
+    ax3 = plt.subplot(2, 2, (2,4))
+    i_sort = np.argsort(waste_main_sources)[::-1]
+    i_5ormore = np.where(waste_main_sources[i_sort] >= 5)
+    waste_big_sources = waste_main_sources[i_sort][i_5ormore]
+    lon_big_sources = lon_main_sources[i_sort][i_5ormore]
+    lat_big_sources = lat_main_sources[i_sort][i_5ormore]
+    colors_big_sources = np.array(main_source_colors)[i_sort][i_5ormore]
+    i_biggest_sources = waste_big_sources >= 50
+    lon_biggest_sources = lon_big_sources[i_biggest_sources]
+    lat_biggest_sources = lat_big_sources[i_biggest_sources]
+    waste_biggest_sources = waste_big_sources[i_biggest_sources]
+    if river_names == []:
+    # print lon and lat of rivers contributing >50 particles (to find names and add to labels)
+        print('Locations of largest sources (> 50 particles):')
+        for i in range(len(lon_biggest_sources)):
+            print(f'{lon_biggest_sources[i]}, {lat_biggest_sources[i]}, {waste_biggest_sources[i]}')
+    # plot
+    ax3.bar(np.arange(0, len(waste_big_sources)), waste_big_sources, color=colors_big_sources, zorder=5)
+    ax3.set_ylabel('Particles [#]')
+    ax3.set_ylim(ylim_rivers)
+    yticks = np.arange(0, ylim_rivers[1], 20)
+    yticks[0] = ylim_rivers[0]
+    ax3.set_yticks(yticks)
+    # river names
+    xticks = np.arange(0, len(i_biggest_sources))
+    ax3.set_xticks(xticks)
+    xlabels = river_names
+    for i in range(len(xticks)-len(river_names)):
+        xlabels.append('')
+    ax3.set_xticklabels(xlabels, rotation='vertical')
+    # title
+    anchored_text = AnchoredText('(c) Contributions of rivers to particles reaching CKI', loc='upper left', borderpad=0.0)
+    ax3.add_artist(anchored_text)
+    # make ax3 a bit shorter
+    l3, b3, w3, h3 = ax3.get_position().bounds
+    ax3.set_position([l3, b3+(0.25*h3)/2, w3, 0.75*h3])
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-def particle_timeseries(ylim=[0, 350], output_path=None, plot_style='plot_tools/plot.mplstyle'):
+def release_arrival_histogram(ylim=[0, 350], output_path=None, plot_style='plot_tools/plot.mplstyle'):
     particles = BeachingParticles.read_from_netcdf(get_dir('cki_input'))
     months = np.arange(1,13,1)
     n_release, _, n_entry = get_n_particles_per_month_release_arrival(particles)
     colors = get_months_colors()
     plt.style.use(plot_style)
-    fig = plt.figure(figsize=(4,5))
+    fig = plt.figure(figsize=(3,4))
     ax = plt.gca()
     ax.bar(months-0.2, n_release, width=0.4, label='Release', color=colors,
            hatch='////', edgecolor='k', zorder=5)
@@ -114,9 +204,14 @@ def particle_timeseries(ylim=[0, 350], output_path=None, plot_style='plot_tools/
     legend_elements = [Patch(facecolor='w', edgecolor='k', hatch='//////', label='Release'),
                        Patch(facecolor='w', edgecolor='k', label='CKI arrival')]
     ax.legend(handles=legend_elements, loc='upper right')
+    # title
+    anchored_text = AnchoredText('Seasonality of particles reaching Cocos Keeling Islands', loc='upper left', borderpad=0.0)
+    ax.add_artist(anchored_text)
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
 if __name__ == '__main__':
-    particle_timeseries(output_path=get_dir('cki_plots')+'release_arrival_times.jpg')
+    river_names_cki = ['Serayu', 'Progo', 'Tanduy', 'Opak']
+    particle_tracks_and_main_sources(river_names=river_names_cki, output_path=get_dir('cki_plots')+'cki_main_sources.jpg')
+    release_arrival_histogram(output_path=get_dir('cki_plots')+'cki_release_arrival_times.jpg')

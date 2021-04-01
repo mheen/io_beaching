@@ -1,5 +1,21 @@
+from plastic_sources import RiverSources
 from particles import BeachingParticles
 import numpy as np
+
+def get_iot_lon_lat_range():
+    lon_range = [90., 128.]
+    lat_range = [-20., 6.]
+    return (lon_range, lat_range)
+
+def get_iot_sources(original=False):
+    iot_lon, iot_lat = get_iot_lon_lat_range()
+    if not original:
+        global_sources = RiverSources.read_from_netcdf()
+    else:
+        global_sources = RiverSources.read_from_shapefile()
+    io_sources = global_sources.get_riversources_from_ocean_basin('io')
+    iot_sources = io_sources.get_riversources_in_lon_lat_range(iot_lon, iot_lat)
+    return iot_sources
 
 def get_cki_box_lon_lat_range():
     lon_range = [96.6, 97.1]
@@ -37,6 +53,26 @@ def get_particle_release_locations_box(particles: BeachingParticles):
     l_box = get_l_particles_in_box(particles)
     lon0, lat0 = particles.get_initial_particle_lon_lat()
     return (lon0[l_box], lat0[l_box])
+
+def get_main_sources_lon_lat_n_particles(particles: BeachingParticles):
+    lon0, lat0 = get_particle_release_locations_box(particles)
+    coordinates0 = []
+    for i in range(len(lon0)):
+        coordinates0.append([lon0[i], lat0[i]])
+    coordinates0 = np.array(coordinates0)
+    coordinates0_unique, counts_unique = np.unique(coordinates0, axis=0, return_counts=True)
+    lon0_unique = coordinates0_unique[:, 0]
+    lat0_unique = coordinates0_unique[:, 1]
+    return (lon0_unique, lat0_unique, counts_unique)
+
+def get_original_source_based_on_lon0_lat0(lon0, lat0):
+    iot_sources = get_iot_sources()
+    iot_sources_org = get_iot_sources(original=True)
+    i_sources = np.where(np.logical_and(iot_sources.lon == lon0, iot_sources.lat == lat0))
+    lon = iot_sources_org.lon[i_sources]
+    lat = iot_sources.lat[i_sources]
+    yearly_waste = np.sum(iot_sources.waste[i_sources], axis=1)
+    return (lon, lat, yearly_waste)
 
 def get_n_particles_per_month_release_arrival(particles: BeachingParticles):
     release_time = get_particle_release_time_box(particles)
