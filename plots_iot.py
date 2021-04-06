@@ -192,6 +192,14 @@ def release_arrival_histogram(iot_island='cki', ylim=[0, 350], output_path=None,
     months = np.arange(1,13,1)
     n_release, _, n_entry = get_n_particles_per_month_release_arrival(particles, iot_island)
     colors = get_months_colors()
+    if iot_island == 'cki':
+        iot_short_name = 'CKI'
+        iot_long_name = 'Cocos Keeling Islands'
+    elif iot_island == 'christmas':
+        iot_short_name = 'CI'
+        iot_long_name = 'Christmas Island'
+    else:
+        raise ValueError(f'Unknown iot_island {iot_island}, valid options are: cki and christmas.')
     plt.style.use(plot_style)
     fig = plt.figure(figsize=(3,4))
     ax = plt.gca()
@@ -211,10 +219,10 @@ def release_arrival_histogram(iot_island='cki', ylim=[0, 350], output_path=None,
     ax.set_ylim(ylim)
     # legend
     legend_elements = [Patch(facecolor='w', edgecolor='k', hatch='//////', label='Release'),
-                       Patch(facecolor='w', edgecolor='k', label='CKI arrival')]
+                       Patch(facecolor='w', edgecolor='k', label=f'{iot_short_name} arrival')]
     ax.legend(handles=legend_elements, loc='upper right')
     # title
-    anchored_text = AnchoredText('Seasonality of particles reaching Cocos Keeling Islands', loc='upper left', borderpad=0.0)
+    anchored_text = AnchoredText(f'Seasonality of particles reaching {iot_long_name} ({iot_short_name})', loc='upper left', borderpad=0.0)
     ax.add_artist(anchored_text)
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
