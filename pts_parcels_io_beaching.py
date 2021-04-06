@@ -95,6 +95,50 @@ def _get_io_indices_from_netcdf(input_path='input/hycom_landmask.nc',lon_range=[
     indices = {'lon' : range(i_lon_start,i_lon_end), 'lat': range(i_lat_start,i_lat_end)}
     return indices
 
+def run_hycom_cfsr_subset_monthly_release(output_dir, output_name,
+                                          time0, lon0, lat0, start_date, end_date,
+                                          windage=0.03,
+                                          input_dir_hycom=get_dir('hycom_input'),
+                                          input_dir_cfsr=get_dir('cfsr_input'),
+                                          indices_hycom=_get_io_indices_from_netcdf(),
+                                          indices_cfsr=_get_io_indices_from_netcdf(input_path=get_dir('cfsr_indices_input')),
+                                          kh=10., interp_method='linear'):
+    # get paths
+    ncfiles_hycom = get_daily_ncfiles_in_time_range(input_dir_hycom, start_date, end_date)
+    ncfiles_cfsr = get_daily_ncfiles_in_time_range(input_dir_cfsr, start_date, end_date)
+    output_path = output_dir+output_name
+    # create fieldset
+    filenames_hycom = [input_dir_hycom+ncfile for ncfile in ncfiles_hycom]
+    filenames_cfsr = [input_dir_cfsr+ncfile for ncfile in ncfiles_cfsr]
+    variables_hycom = {'U':'u', 'V':'v'}
+    variables_cfsr = {'U':'u','V':'v'}
+    dimensions_hycom = {'lat':'lat','lon':'lon','time':'time'}
+    dimensions_cfsr = {'lat':'lat','lon':'lon','time':'time'}
+    fset_hycom = FieldSet.from_netcdf(filenames_hycom, variables_hycom, dimensions_hycom, indices=indices_hycom)
+    fset_cfsr = FieldSet.from_netcdf(filenames_cfsr, variables_cfsr, dimensions_cfsr, indices=indices_cfsr)
+    fset_cfsr.U.set_scaling_factor(windage)
+    fset_cfsr.V.set_scaling_factor(windage)
+    fset = FieldSet(U=fset_hycom.U+fset_cfsr.U, V=fset_hycom.V+fset_cfsr.V)
+    # add constant horizontal diffusivity (zero on land)
+    lm = LandMask.read_from_netcdf()    
+    kh2D = kh*np.ones(lm.mask.shape)
+    kh2D[lm.mask.astype('bool')] = 0.0 # diffusion zero on land    
+    kh2D_subset = kh2D[indices_hycom['lat'],:][:,indices_hycom['lon']]
+    fset.add_field(Field('Kh_zonal', data=kh2D_subset, lon=fset_hycom.U.grid.lon, lat=fset_hycom.U.grid.lat,
+                         mesh='spherical', interp_method=interp_method))
+    fset.add_field(Field('Kh_meridional', data=kh2D_subset, lon=fset_hycom.U.grid.lon, lat=fset_hycom.U.grid.lat,
+                         mesh='spherical', interp_method=interp_method))
+    # monthly release
+    pset = ParticleSet(fieldset=fset, pclass=JITParticle, lon=lon0, lat=lat0, time=time0)
+    # execute
+    run_time = timedelta(days=(end_date-start_date).days)
+    dt = timedelta(hours=1)
+    output_interval = 24    
+    kernel = pset.Kernel(AdvectionRK4) + pset.Kernel(DiffusionUniformKh)
+    output_file = pset.ParticleFile(name=output_path,outputdt=dt*output_interval)
+    pset.execute(kernel,runtime=run_time,dt=dt,output_file=output_file,verbose_progress=True,
+                 recovery={ErrorCode.ErrorOutOfBounds: delete_particle})
+
 def run_hycom_subset_monthly_release(input_dir,output_dir,output_name,
                                      time0,lon0,lat0,start_date,end_date,
                                      kh=10.,interp_method='linear',indices=_get_io_indices_from_netcdf()):
