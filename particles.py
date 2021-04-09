@@ -330,6 +330,7 @@ class BeachingParticles():
         return BeachingParticles(pid,time,lon,lat,beached,self.t_interval)
 
     def get_particles_from_initial_lon_lat_range(self, lon_range, lat_range):
+        log.info(None, f'Getting particles in lon and lat range: {lon_range}, {lat_range}')
         lon0, lat0 = self.get_initial_particle_lon_lat()
         l_lon = np.logical_and(lon_range[0]<=lon0, lon0<=lon_range[1])
         l_lat = np.logical_and(lat_range[0]<=lat0, lat0<=lat_range[1])

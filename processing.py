@@ -171,9 +171,17 @@ def process_particles(input_description='io_river_sources',
     return basin_particles
 
 def process_specific_file_particles_in_lon_lat_range(input_path, output_path, lon_range, lat_range, t_interval=1):
-    particles = BeachingParticles.read_from_parcels_netcdf(input_path, t_interval=t_interval)
-    particles_in_range = particles.get_particles_from_initial_lon_lat_range(lon_range, lat_range)
-    _write_to_netcdf(particles_in_range, output_path)
+    if type(input_path) == list:
+        particles = BeachingParticles.read_from_parcels_netcdf(input_path[0], t_interval=t_interval)
+        for i in range(len(input_path)-1):
+            particles.add_particles_from_parcels_netcdf(input_path[i+1])
+    elif type(input_path) == str:
+        particles = BeachingParticles.read_from_parcels_netcdf(input_path, t_interval=t_interval)
+    if lon_range is not None and lat_range is not None:
+        particles_in_range = particles.get_particles_from_initial_lon_lat_range(lon_range, lat_range)
+        _write_to_netcdf(particles_in_range, output_path)
+    else:
+        _write_to_netcdf(particles, output_path)
 
 if __name__ == '__main__':
     basin_names = ['io_nh','io_sh']
