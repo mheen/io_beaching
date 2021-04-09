@@ -1,5 +1,6 @@
 from plastic_sources import RiverSources
 from particles import BeachingParticles
+from utilities import get_index_closest_point
 import numpy as np
 
 def get_iot_lon_lat_range():
@@ -81,13 +82,15 @@ def get_main_sources_lon_lat_n_particles(particles: BeachingParticles, iot_islan
     return (lon0_unique, lat0_unique, counts_unique)
 
 def get_original_source_based_on_lon0_lat0(lon0, lat0):
-    iot_sources = get_iot_sources()
-    iot_sources_org = get_iot_sources(original=True)
-    i_sources = np.where(np.logical_and(iot_sources.lon == lon0, iot_sources.lat == lat0))
-    lon = iot_sources_org.lon[i_sources]
-    lat = iot_sources.lat[i_sources]
-    yearly_waste = np.sum(iot_sources.waste[i_sources], axis=1)
-    return (lon, lat, yearly_waste)
+    iot_sources = get_iot_sources(original=True)
+    i_closest = get_index_closest_point(iot_sources.lon, iot_sources.lat, lon0, lat0, n_closest=6)
+    # iot_sources = get_iot_sources()
+    # iot_sources_org = get_iot_sources(original=True)
+    # i_sources = np.where(np.logical_and(iot_sources.lon == lon0, iot_sources.lat == lat0))
+    lon = iot_sources.lon[i_closest]
+    lat = iot_sources.lat[i_closest]
+    yearly_waste = np.sum(iot_sources.waste[i_closest], axis=1)
+    return lon, lat, yearly_waste
 
 def get_n_particles_per_month_release_arrival(particles: BeachingParticles, iot_island):
     release_time = get_particle_release_time_box(particles, iot_island)

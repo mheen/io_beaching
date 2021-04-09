@@ -151,6 +151,21 @@ def get_distance_between_points(lon1,lat1,lon2,lat2):
     distance = geodesic(pos2,pos1).meters
     return distance
 
+def get_index_closest_point(lon, lat, lon0, lat0, n_closest=1):
+    distance = []
+    for i in range(len(lon)):
+        distance.append(get_distance_between_points(lon[i], lat[i], lon0, lat0))
+    distance = np.array(distance)
+    i_closest = np.where(distance == np.nanmin(distance))[0][0]
+    i_remove = i_closest
+    i_closest = [i_closest]
+    while n_closest > 1:
+        distance = np.delete(distance, i_remove)
+        i_remove = np.where(distance == np.nanmin(distance))[0][0]
+        i_closest.append(i_remove)        
+        n_closest -= 1
+    return i_closest
+
 def convert_lon_360_to_180(lon):
     lon[lon>180] = lon[lon>180]-360
     return lon
