@@ -190,6 +190,7 @@ class MapPlot:
             self.ax.set_title(self.title)
 
     def _basic_map(self,edgecolor,landcolor):
-        self.ax.add_feature(cftr.LAND,facecolor=landcolor,edgecolor=edgecolor,zorder=2)
+        if edgecolor is not None and landcolor is not None:
+            self.ax.add_feature(cftr.LAND,facecolor=landcolor,edgecolor=edgecolor,zorder=2)
         self.ax.set_extent([self.lon_range[0],self.lon_range[1],
                             self.lat_range[0],self.lat_range[1]],ccrs.PlateCarree())

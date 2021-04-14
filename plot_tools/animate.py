@@ -29,6 +29,7 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
     plt.style.use(plot_style)
     plt.rcParams.update({'font.size' : 6})
     plt.rcParams.update({'font.family': 'arial'})
+    plt.rcParams.update({'figure.dpi': dpi})
     fig = plt.figure(figsize=(5,4))
     ax = plt.gca(projection=ccrs.PlateCarree())
     ax.add_feature(cftr.LAND,color='#FAF1D7')
@@ -83,7 +84,7 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
 
     anim = animation.FuncAnimation(plt.gcf(),animate,init_func=init,frames=len(time),blit=True)
     if output_name is not None:
-        output_path = get_dir('animation_output')+output_name+'.gif'
+        output_path = f'{get_dir("animation_output")}{output_name}_{fps}fps_{dpi}dpi.gif'
         anim.save(output_path,writer=writer)
     else:
         plt.show()
@@ -121,13 +122,13 @@ def christmas_island_animation():
                              dpi=300,fps=2,title_style='month',add_uwa_logo=True,logo_extent=logo_extent)
     
 def cocos_keeling_islands_animation():
-    particles = BeachingParticles.read_from_netcdf(get_dir('cki_input'))
+    particles = BeachingParticles.read_from_netcdf(get_dir('iot_input_2008'))
 
     lon_range = [90., 128.]
     lat_range = [-20., 6.]
-    output_name = 'plastic_waste_cocos_keeling'
+    output_name = 'plastic_waste_cki_2008'
     create_animation_beached(particles.time, particles.lon, particles.lat, None, None,
                              output_name= output_name, lon_range=lon_range, lat_range=lat_range,
                              text='Cocos Keeling\nIslands', text_lon=97., text_lat=-13.,
                              point=True, point_lon=96.86, point_lat=-12.14,
-                             dpi=300, fps=2, title_style='month')
+                             dpi=150, fps=4, title_style='month')
