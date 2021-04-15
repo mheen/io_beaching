@@ -12,6 +12,7 @@ from matplotlib.patches import Patch
 from matplotlib.colors import LinearSegmentedColormap, BoundaryNorm
 import cartopy.crs as ccrs
 import cartopy.feature as cftr
+import cartopy.io.shapereader as shpreader
 import numpy as np
 from datetime import datetime
 
@@ -45,7 +46,7 @@ def _iot_basic_map(ax, xmarkers='bottom', ymarkers='left', lon_range=None, lat_r
     return mplot
 
 def _main_source_info():
-    ranges = np.array([300., 100., 50., 25., 10., 5., 1.])
+    ranges = np.array([400., 100., 50., 25., 10., 5., 1.])
     labels = ['> 100','50 - 100','25 - 50','10 - 25', '5 - 10','1 - 5']
     colors = get_colormap_reds(len(ranges)-1)[::-1]
     edge_widths = [0.7,0.7,0.7,0.5,0.5,0.5]
@@ -75,6 +76,182 @@ def _get_legend_entries_for_main_sources():
         legend_entries.append(Line2D([0],[0],marker='o',color='w',markerfacecolor=colors[i],                              
                               markersize=legend_sizes[i],label=labels[i],markeredgewidth=edge_widths[i]))
     return legend_entries
+
+def _get_sorted_river_contribution_info(lon_main_sources,
+                                        lat_main_sources,
+                                        waste_main_sources,
+                                        main_source_colors,
+                                        river_names,
+                                        iot_name):
+    i_sort = np.argsort(waste_main_sources)[::-1]
+    i_5ormore = np.where(waste_main_sources[i_sort] >= 5)
+    waste_big_sources = waste_main_sources[i_sort][i_5ormore]
+    lon_big_sources = lon_main_sources[i_sort][i_5ormore]
+    lat_big_sources = lat_main_sources[i_sort][i_5ormore]
+    colors_big_sources = np.array(main_source_colors)[i_sort][i_5ormore]
+    i_biggest_sources = waste_big_sources >= 50
+    lon_biggest_sources = lon_big_sources[i_biggest_sources]
+    lat_biggest_sources = lat_big_sources[i_biggest_sources]
+    waste_biggest_sources = waste_big_sources[i_biggest_sources]
+    percentage_waste_big_sources = waste_big_sources/np.sum(waste_main_sources)*100
+    x = np.arange(0, len(waste_big_sources))
+    if river_names == []:
+        # write lon and lat of rivers contributing >50 particles (to find names and add to labels)
+        with open('iot_main_sources.txt', 'a') as f:
+            f.write(f'\n{iot_name}\n')
+            f.write('Locations of largest sources (> 50 particles):\n')
+            for i in range(len(lon_biggest_sources)):
+                f.write(f'\nSource {i+1}: {lon_biggest_sources[i]}, {lat_biggest_sources[i]}, {waste_biggest_sources[i]}\n')
+                lon_org, lat_org, waste_org = get_original_source_based_on_lon0_lat0(lon_biggest_sources[i], lat_biggest_sources[i])
+                f.write('Original source locations:\n')
+                for j in range(len(lon_org)):
+                    f.write(f'{lon_org[j]}, {lat_org[j]}, {waste_org[j]}\n')
+    return x, percentage_waste_big_sources, colors_big_sources
+
+def figure1_overview(output_path=None,
+                     river_dir = get_dir('indonesia_rivers'),
+                     river_filenames=['progo.shp', 'bogowonto.shp', 'serayu.shp', 'tanduy.shp', 'wulan.shp'],
+                     river_color = '#002eb5',
+                     linewidth=1.5,
+                     plot_style='plot_tools/plot.mplstyle'):
+    # boxes IOT
+    lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
+    lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
+    # box Java:
+    lon_range_java = [105., 115.6]
+    lat_range_java = [-9., -5.]
+    meridians_java = [105, 110, 115]
+    parallels_java = np.arange(lat_range_java[0], lat_range_java[1]+1, 1)
+    # box zoom Java:
+    lon_range = [107.5, 111.]
+    lat_range = [-8.2, -6.]
+    meridians = [108, 109, 110]
+    parallels = [-8, -7, -6]
+    # cities
+    city_names = ['Tasikmalaya', 'Purwokerto', 'Wonosobo', 'Purworejo', 'Magelang', 'Yogyakarta']
+    city_lons = [108.22, 109.25, 109.90, 110.01, 110.22, 110.37]
+    city_lats = [-7.35, -7.42, -7.37, -7.71, -7.49, -7.80]
+
+    plt.style.use(plot_style)
+    fig = plt.figure(figsize=(4,3))
+    # (a) Overview
+    ax1 = plt.subplot(1, 2, 1, projection=ccrs.PlateCarree())
+    mplot1 = _iot_basic_map(ax1)
+    mplot1.box(lon_range_cki, lat_range_cki, linewidth=0.5)
+    mplot1.box(lon_range_ci, lat_range_ci, linewidth=0.5)
+    mplot1.box(lon_range, lat_range, linewidth=1, color='#d00d20')
+    mplot1.add_subtitle('(a) Region overview and main ocean currents')
+    # (b) zoom Java
+    ax2 = plt.subplot(1, 2, 2, projection=ccrs.PlateCarree())
+    mplot2 = MapPlot(ax2, lon_range, lat_range, meridians=meridians, parallels=parallels,
+                     ymarkers='right')
+    for river_file in river_filenames:
+        reader = shpreader.Reader(river_dir+river_file)
+        rivers = reader.records()
+        for river in rivers:
+            ax2.add_geometries([river.geometry], ccrs.PlateCarree(), edgecolor=river_color,
+                               facecolor='None', zorder=5, linewidth=linewidth)
+    mplot2.points(city_lons, city_lats, marker='o', edgecolor='k', facecolor='#d00d20', markersize=5)
+    mplot2.add_subtitle('(b) Main Javanese rivers contributing to IOT plastic waste')
+    if output_path:
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.show()
+
+def figure2_main_sources(river_names_cki=[], river_names_ci=[],
+                         ylim_cki=[0, 40], ylim_ci=[0, 40],
+                         output_path=None, plot_style='plot_tools/plot.mplstyle'):
+    particles = BeachingParticles.read_from_netcdf(get_dir('iot_input'))
+    box_lon_cki, box_lat_cki = get_cki_box_lon_lat_range()
+    box_lon_ci, box_lat_ci = get_christmas_box_lon_lat_range()
+    l_box_cki = get_l_particles_in_box(particles, 'cki')
+    l_box_ci = get_l_particles_in_box(particles, 'christmas')
+    lon_main_cki, lat_main_cki, waste_main_cki = get_main_sources_lon_lat_n_particles(particles, 'cki')
+    lon_main_ci, lat_main_ci, waste_main_ci = get_main_sources_lon_lat_n_particles(particles, 'christmas')
+    (main_colors_cki,
+    main_sizes_cki,
+    main_edgewidths_cki) = _get_marker_colors_sizes_edgewidths_for_main_sources(waste_main_cki)
+    (main_colors_ci,
+    main_sizes_ci,
+    main_edgewidths_ci) = _get_marker_colors_sizes_edgewidths_for_main_sources(waste_main_ci)
+    x_cki, waste_big_cki, colors_big_cki = _get_sorted_river_contribution_info(lon_main_cki,
+                                                                              lat_main_cki,
+                                                                              waste_main_cki,
+                                                                              main_colors_cki,
+                                                                              river_names_cki,
+                                                                              'CKI')
+    x_ci, waste_big_ci, colors_big_ci = _get_sorted_river_contribution_info(lon_main_ci,
+                                                                           lat_main_ci,
+                                                                           waste_main_ci,
+                                                                           main_colors_ci,
+                                                                           river_names_ci,
+                                                                           'CI')
+
+    plt.style.use(plot_style)
+    fig = plt.figure(figsize=(6, 4))
+    plt.subplots_adjust(wspace=0.0)
+    plt.subplots_adjust(hspace=0.25)
+    land_color = '#cfcfcf'
+    in_box_color = '#2e4999'
+    # (a) main sources CKI
+    ax1 = plt.subplot(2, 3, (1, 2), projection=ccrs.PlateCarree())
+    mplot1 = _iot_basic_map(ax1)
+    mplot1.ax.set_xticklabels([])
+    mplot1.tracks(particles.lon[l_box_cki, :], particles.lat[l_box_cki, :], color=in_box_color, linewidth=0.2)
+    mplot1.box(box_lon_cki, box_lat_cki, linewidth=0.8, color='w')
+    mplot1.box(box_lon_cki, box_lat_cki, linewidth=0.5)
+    ax1.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
+    mplot1.points(lon_main_cki, lat_main_cki, marker='o', facecolor=main_colors_cki,
+                 markersize=np.array(main_sizes_cki)*5, edgewidth=main_edgewidths_cki)
+    mplot1.add_subtitle(f'(a) Source locations and tracks of particles reaching Cocos Keeling Islands (CKI)')
+    ax1.set_anchor('W')
+    # (c) main sources CI
+    ax2 = plt.subplot(2, 3, (4, 5), projection=ccrs.PlateCarree())
+    mplot2 = _iot_basic_map(ax2)
+    mplot2.tracks(particles.lon[l_box_ci, :], particles.lat[l_box_ci, :], color=in_box_color, linewidth=0.2)
+    mplot2.box(box_lon_ci, box_lat_ci, linewidth=0.8, color='w')
+    mplot2.box(box_lon_ci, box_lat_ci, linewidth=0.5)
+    ax2.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
+    mplot2.points(lon_main_ci, lat_main_ci, marker='o', facecolor=main_colors_ci,
+                 markersize=np.array(main_sizes_ci)*5, edgewidth=main_edgewidths_ci)
+    mplot2.add_subtitle(f'(c) Source locations and tracks of particles reaching Christmas Island (CI)')
+    # sources legend
+    legend_entries = _get_legend_entries_for_main_sources()
+    ax2.set_anchor('W')
+    ax2.legend(handles=legend_entries, title='[# particles]', loc='upper right',
+                bbox_to_anchor=(1.25, 1.0))
+    # (b) river contributions CKI
+    ax3 = plt.subplot(2, 3, 3)
+    ax3.bar(x_cki, waste_big_cki, color=colors_big_cki, zorder=5)
+    ax3.set_ylabel('[% particles arriving]')
+    ax3.set_ylim(ylim_cki)
+    yticks = np.arange(0, ylim_cki[1], 5)
+    yticks[0] = ylim_cki[0]
+    ax3.set_yticks(yticks)
+    xticks = np.arange(0, len(river_names_cki))
+    ax3.set_xticks(xticks)
+    ax3.set_xticklabels(river_names_cki, rotation='vertical')
+    ax3.grid(False, axis='x')
+    anchored_text1 = AnchoredText(f'(b) Contributions of rivers to particles reaching the CKI', loc='upper left', borderpad=0.0)
+    ax3.add_artist(anchored_text1)
+    ax3.set_anchor('W')
+    # (d) river contributions CI
+    ax4 = plt.subplot(2, 3, 6)
+    ax4.bar(x_ci, waste_big_ci, color=colors_big_ci, zorder=5)
+    ax4.set_ylim(ylim_ci)
+    yticks2 = np.arange(0, ylim_ci[1], 5)
+    yticks2[0] = ylim_ci[0]
+    ax4.set_yticks(yticks2)
+    ax4.set_ylabel('[% particles arriving]')
+    xticks = np.arange(0, len(river_names_ci))
+    ax4.set_xticks(xticks)
+    ax4.set_xticklabels(river_names_ci, rotation='vertical')
+    ax4.grid(False, axis='x')
+    anchored_text2 = AnchoredText(f'(d) Contributions of rivers to particles reaching the CI', loc='upper left', borderpad=0.0)
+    ax4.add_artist(anchored_text2)
+    ax4.set_anchor('W')
+    if output_path:
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.show()
 
 def particle_tracks_and_main_sources(iot_island='cki', river_names = [], ylim_rivers = [5, 210],
                                      output_path=None, plot_style='plot_tools/plot.mplstyle'):
@@ -229,11 +406,7 @@ def release_arrival_histogram(iot_island='cki', ylim=[0, 350], output_path=None,
     plt.show()
 
 if __name__ == '__main__':
-    river_names_cki = ['Serayu', 'Progo', 'Tanduy', 'Opak']
-    particle_tracks_and_main_sources(iot_island='cki', river_names=river_names_cki, output_path=get_dir('iot_plots')+'cki_main_sources.jpg')
-    release_arrival_histogram(iot_island='cki', output_path=get_dir('iot_plots')+'cki_release_arrival_times.jpg')
-    river_names_ci = ['Tanduy', 'Wulan']
-    particle_tracks_and_main_sources(iot_island='christmas', river_names=river_names_ci, ylim_rivers=[5, 300],
-                                     output_path=get_dir('iot_plots')+'christmas_main_sources.jpg')
-    release_arrival_histogram(iot_island='christmas', ylim=[0, 420],
-                              output_path=get_dir('iot_plots')+'christmas_release_arrival_times.jpg')
+    # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
+    # river_names_cki = ['Serayu', 'Brogowonto', 'Tanduy', 'Progo']
+    # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
+    # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
