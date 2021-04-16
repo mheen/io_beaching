@@ -133,10 +133,14 @@ def figure1_overview(output_path=None,
     city_lats = [-7.35, -7.42, -7.37, -7.71, -7.49, -7.80]
 
     plt.style.use(plot_style)
-    fig = plt.figure(figsize=(4,3))
+    fig = plt.figure(figsize=(8,6))
+    plt.rcParams['font.size'] = 8
+    plt.rcParams['axes.labelsize'] = 6
     # (a) Overview
     ax1 = plt.subplot(1, 2, 1, projection=ccrs.PlateCarree())
     mplot1 = _iot_basic_map(ax1)
+    plt.rcParams['font.size'] = 8
+    plt.rcParams['axes.labelsize'] = 6
     mplot1.box(lon_range_cki, lat_range_cki, linewidth=0.5)
     mplot1.box(lon_range_ci, lat_range_ci, linewidth=0.5)
     mplot1.box(lon_range, lat_range, linewidth=1, color='#d00d20')
@@ -145,6 +149,8 @@ def figure1_overview(output_path=None,
     ax2 = plt.subplot(1, 2, 2, projection=ccrs.PlateCarree())
     mplot2 = MapPlot(ax2, lon_range, lat_range, meridians=meridians, parallels=parallels,
                      ymarkers='right')
+    plt.rcParams['font.size'] = 8
+    plt.rcParams['axes.labelsize'] = 6
     for river_file in river_filenames:
         reader = shpreader.Reader(river_dir+river_file)
         rivers = reader.records()
