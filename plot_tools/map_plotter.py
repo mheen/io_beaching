@@ -114,6 +114,16 @@ class MapPlot:
         else:
             return c,ranges
 
+    def quiver(self, lon, lat, u, v, thin=None, scale=25):
+        if thin is not None:
+            i = np.arange(0,u.shape[0],thin)
+            j = np.arange(0,u.shape[1],thin)
+            u = u[i][:,j]
+            v = v[i][:,j]
+            lon = lon[j]
+            lat = lat[i]
+        self.ax.quiver(lon, lat, u, v, scale=scale, transform=ccrs.PlateCarree(), zorder=3)
+
     def contourf(self,lon,lat,z,levels=None,cmap='Reds'):
         xx,yy = np.meshgrid(lon,lat)
         if levels is not None:            
