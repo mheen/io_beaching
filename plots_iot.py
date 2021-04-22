@@ -138,17 +138,26 @@ def figure1_overview(output_path=None,
     fig = plt.figure(figsize=(8,6))
     plt.rcParams['font.size'] = 8
     plt.rcParams['axes.labelsize'] = 6
-    # (a) Overview
-    ax1 = plt.subplot(1, 2, 1, projection=ccrs.PlateCarree())
+    # (a) Overview NE monsoon
+    ax1 = plt.subplot(2, 2, 1, projection=ccrs.PlateCarree())
     mplot1 = _iot_basic_map(ax1)
     plt.rcParams['font.size'] = 8
     plt.rcParams['axes.labelsize'] = 6
     mplot1.box(lon_range_cki, lat_range_cki, linewidth=0.5)
     mplot1.box(lon_range_ci, lat_range_ci, linewidth=0.5)
     mplot1.box(lon_range, lat_range, linewidth=1, color='#d00d20')
-    mplot1.add_subtitle('(a) Region overview and main ocean currents')
-    # (b) zoom Java
-    ax2 = plt.subplot(1, 2, 2, projection=ccrs.PlateCarree())
+    mplot1.add_subtitle('(a) Region overview and main NE monsoon ocean currents')
+    # (b) Overview SW monsoon
+    ax3 = plt.subplot(2, 2, 3, projection=ccrs.PlateCarree())
+    mplot3 = _iot_basic_map(ax3)
+    plt.rcParams['font.size'] = 8
+    plt.rcParams['axes.labelsize'] = 6
+    mplot3.box(lon_range_cki, lat_range_cki, linewidth=0.5)
+    mplot3.box(lon_range_ci, lat_range_ci, linewidth=0.5)
+    mplot3.box(lon_range, lat_range, linewidth=1, color='#d00d20')
+    mplot3.add_subtitle('(b) Region overview and main SW monsoon ocean currents')
+    # (c) zoom Java
+    ax2 = plt.subplot(2, 2, (2, 4), projection=ccrs.PlateCarree())
     mplot2 = MapPlot(ax2, lon_range, lat_range, meridians=meridians, parallels=parallels,
                      ymarkers='right')
     plt.rcParams['font.size'] = 8
@@ -160,7 +169,7 @@ def figure1_overview(output_path=None,
             ax2.add_geometries([river.geometry], ccrs.PlateCarree(), edgecolor=river_color,
                                facecolor='None', zorder=5, linewidth=linewidth)
     mplot2.points(city_lons, city_lats, marker='o', edgecolor='k', facecolor='#d00d20', markersize=5)
-    mplot2.add_subtitle('(b) Main Javanese rivers contributing to IOT plastic waste')
+    mplot2.add_subtitle('(c) Main Javanese rivers contributing to IOT plastic waste')
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
