@@ -90,6 +90,12 @@ def get_l_time_range(time,start_time,end_time):
     l_time = l_start & l_end
     return l_time
 
+def add_month_to_timestamp(timestamp, n_month):
+    month = timestamp.month - 1 + n_month
+    year = timestamp.year + month // 12
+    month = month % 12 + 1
+    return datetime(year, month, timestamp.day)
+
 def convert_time_to_datetime(time_org,time_units):
     time = []
     if 'since' in time_units:   
