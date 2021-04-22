@@ -1,4 +1,4 @@
-from utilities import get_closest_index
+from utilities import get_closest_index, add_month_to_timestamp, get_dir
 import numpy as np
 import shapefile
 from shapely.geometry import Point
@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cftr
 from netCDF4 import Dataset
+from datetime import datetime, timedelta
 import log
 
 # -----------------------------------------------
@@ -338,3 +339,70 @@ def get_io_lon_lat_range():
 
 def get_global_grid(dx=1):
     return Grid(dx,[-180,180],[-90,90],periodic=True)
+
+def _get_io_indices_from_netcdf(input_path='input/hycom_landmask.nc',lon_range=[0.,130.],lat_range=[-75,40]):
+    netcdf = Dataset(input_path)
+    lon = netcdf['lon'][:].filled(fill_value=np.nan)
+    lat = netcdf['lat'][:].filled(fill_value=np.nan)
+    i_lon_start = get_closest_index(lon,lon_range[0])
+    i_lon_end = get_closest_index(lon,lon_range[1])
+    i_lat_start = get_closest_index(lat,lat_range[0])
+    i_lat_end = get_closest_index(lat,lat_range[1])
+    indices = {'lon' : range(i_lon_start,i_lon_end), 'lat': range(i_lat_start,i_lat_end)}
+    return indices
+
+def read_mean_hycom_data(input_path):
+    netcdf = Dataset(input_path)
+    lon = netcdf['lon'][:].filled(fill_value=np.nan)
+    lat = netcdf['lat'][:].filled(fill_value=np.nan)
+    u = netcdf['u'][:].filled(fill_value=np.nan)
+    v = netcdf['v'][:].filled(fill_value=np.nan)
+    return lon, lat, u, v
+
+def calculate_mean_hycom_data(months, lon_range, lat_range, input_dir=get_dir('hycom_input')):
+    u_all = []
+    v_all = []
+    for month in months:
+        start_date = datetime(2008, month, 1)
+        end_date = add_month_to_timestamp(start_date, 1)
+        n_days = (end_date-start_date).days
+        for i in range(n_days):
+            date = start_date+timedelta(days=i)
+            input_path = f'{input_dir}{date.strftime("%Y%m%d")}.nc'
+            log.info(None, f'Reading data from: {input_path}')
+            lon, lat, u, v = _read_hycom_data(input_path, lon_range, lat_range)
+            u_all.append(u)
+            v_all.append(v)
+    u_all = np.array(u_all)
+    v_all = np.array(v_all)
+    log.info(None, f'Calculating mean u and v')
+    u_mean = np.nanmean(u_all, axis=0)
+    v_mean = np.nanmean(v_all, axis=0)
+    return lon, lat, u_mean, v_mean
+
+def _write_mean_hycom_data_to_netcdf(lon, lat, u, v, output_path):
+    log.info(None, f'Writing output to netcdf file: {output_path}')
+    nc = Dataset(output_path,'w', format='NETCDF4')
+    # define dimensions
+    nc.createDimension('lat', len(lat))        
+    nc.createDimension('lon',len(lon))
+    # define variables
+    nc_lon = nc.createVariable('lon', float, 'lon', zlib=True)
+    nc_lat = nc.createVariable('lat', float, 'lat', zlib=True)
+    nc_u = nc.createVariable('u', float, ('lat', 'lon'), zlib=True)
+    nc_v = nc.createVariable('v', float, ('lat', 'lon'), zlib=True)
+    # write variables
+    nc_lon[:] = lon
+    nc_lat[:] = lat
+    nc_u[:] = u
+    nc_v[:] = v
+    nc.close()
+
+def _read_hycom_data(input_path, lon_range, lat_range):
+    indices = _get_io_indices_from_netcdf(lon_range=lon_range, lat_range=lat_range)
+    netcdf = Dataset(input_path)
+    lon = netcdf['lon'][indices['lon']].filled(fill_value=np.nan)
+    lat = netcdf['lat'][indices['lat']].filled(fill_value=np.nan)
+    u = netcdf['u'][0, :, :][indices['lat'], :][:, indices['lon']].filled(fill_value=np.nan)
+    v = netcdf['v'][0, :, :][indices['lat'], :][:, indices['lon']].filled(fill_value=np.nan)
+    return lon, lat, u, v
