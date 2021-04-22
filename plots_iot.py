@@ -2,6 +2,7 @@ from plot_tools.map_plotter import MapPlot, get_colormap_reds
 from plots_vanderMheen_et_al_2020 import _get_marker_colors_sizes_edgewidths_for_sources, _get_legend_entries_for_sources
 from particles import BeachingParticles
 from utilities import get_dir
+from ocean_utilities import read_mean_hycom_data
 from postprocessing_iot import get_l_particles_in_box, get_cki_box_lon_lat_range, get_christmas_box_lon_lat_range
 from postprocessing_iot import get_iot_lon_lat_range, get_iot_sources, get_main_sources_lon_lat_n_particles
 from postprocessing_iot import get_original_source_based_on_lon0_lat0, get_n_particles_per_month_release_arrival
@@ -15,6 +16,7 @@ import cartopy.feature as cftr
 import cartopy.io.shapereader as shpreader
 import numpy as np
 from datetime import datetime
+from netCDF4 import Dataset
 
 def get_months_colors():
     colors = ['#ffedbc', '#fece6b', '#fdc374', '#fb9d59', '#f57547', '#d00d20',
@@ -411,7 +413,26 @@ def release_arrival_histogram(iot_island='cki', ylim=[0, 350], output_path=None,
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-if __name__ == '__main__':
+def hycom_velocities(input_path, thin=6, scale=10,
+                     output_path=None,
+                     plot_style='plot_tools/plot.mplstyle'):
+    lon, lat, u, v = read_mean_hycom_data(input_path)
+    # boxes IOT
+    lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
+    lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
+
+    plt.style.use(plot_style)
+    fig = plt.figure()
+    ax = plt.gca(projection=ccrs.PlateCarree())
+    mplot = _iot_basic_map(ax)
+    mplot.quiver(lon, lat, u, v, thin=thin, scale=scale)
+    mplot.box(lon_range_cki, lat_range_cki, linewidth=0.5, color='r')
+    mplot.box(lon_range_ci, lat_range_ci, linewidth=0.5, color='r')
+    if output_path:
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.show()
+
+# if __name__ == '__main__':
     # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
     # river_names_cki = ['Serayu', 'Brogowonto', 'Tanduy', 'Progo']
     # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
