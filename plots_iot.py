@@ -112,9 +112,9 @@ def _get_sorted_river_contribution_info(lon_main_sources,
                     f.write(f'{lon_org[j]}, {lat_org[j]}, {waste_org[j]}\n')
     return x, percentage_waste_big_sources, colors_big_sources
 
-def _histogram_release_arrival(ax, n_release, n_entry, ylim=[0, 50]):
-    p_release = n_release/np.sum(n_release)*100
-    p_entry = n_entry/np.sum(n_entry)*100
+def _histogram_release_arrival(ax, n_release, n_entry, ylim=[0, 500]):
+    p_release = n_release#/np.sum(n_release)*100
+    p_entry = n_entry#/np.sum(n_entry)*100
     months = np.arange(1,13,1)
     colors = get_months_colors()
     ax.bar(months-0.2, p_release, width=0.4, label='Release', color=colors,
@@ -129,7 +129,7 @@ def _histogram_release_arrival(ax, n_release, n_entry, ylim=[0, 50]):
                 width=0.4, color=colors[i], edgecolor='k', zorder=5)
     ax.set_xticks(months)
     ax.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
-    ax.set_ylabel('[% of particles]')
+    ax.set_ylabel('[# of particles]')
     ax.set_ylim(ylim)
 
 def figure1_overview(output_path=None,
@@ -324,7 +324,7 @@ def figure3_release_arrival_histograms(output_path=None, plot_style='plot_tools/
     ax1.set_xlim(1, 12)
     ax1.set_yticks(np.arange(0, 3000, 500))
     ax1.set_ylim(0, 3000)
-    ax1.set_ylabel('Plastic waste entering ocean [tonnes]')
+    ax1.set_ylabel('[# particles]')
     ax1.legend(loc='upper right', bbox_to_anchor=(1.18, 1.0))
     anchored_text1 = AnchoredText(f'(a) Seasonal input of plastic waste from 5 main polluting rivers', loc='upper left', borderpad=0.0)
     ax1.add_artist(anchored_text1)
