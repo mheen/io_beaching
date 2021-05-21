@@ -1,7 +1,7 @@
+from plastic_sources import RiverSources
 from plot_tools.map_plotter import MapPlot, get_colormap_reds
-from plots_vanderMheen_et_al_2020 import _get_marker_colors_sizes_edgewidths_for_sources, _get_legend_entries_for_sources
-from particles import BeachingParticles
-from utilities import get_dir
+from particles import BeachingParticles, Density
+from utilities import get_dir, add_month_to_timestamp
 from ocean_utilities import read_mean_hycom_data
 from postprocessing_iot import get_l_particles_in_box, get_cki_box_lon_lat_range, get_christmas_box_lon_lat_range
 from postprocessing_iot import get_iot_lon_lat_range, get_iot_sources, get_main_sources_lon_lat_n_particles
@@ -10,25 +10,27 @@ import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-from matplotlib.colors import LinearSegmentedColormap, BoundaryNorm
 import cartopy.crs as ccrs
 import cartopy.feature as cftr
 import cartopy.io.shapereader as shpreader
 import numpy as np
 from datetime import datetime
-from netCDF4 import Dataset
+import string
 
 def get_months_colors():
     colors = ['#ffedbc', '#fece6b', '#fdc374', '#fb9d59', '#f57547', '#d00d20',
     '#c9e7f1', '#90c3dd', '#4576b4', '#000086', '#4d00aa', '#30006a']
     return colors
 
-def _logarithmic_colormap():
-    colors = get_colormap_reds(6)
-    ranges = [1,10,100,10**3,10**4,10**5,10**6]
-    cm = LinearSegmentedColormap.from_list('cm_log_density',colors,N=6)
-    norm = BoundaryNorm(ranges,ncolors=6)
-    return colors,ranges,cm,norm
+def _add_horizontal_colorbar(fig,ax,c,ranges,scale_width=1,
+                             ticklabels=['1','10','10$^2$','10$^3$','10$^4$','10$^5$','10$^6$'],
+                             cbarlabel = 'Particle density [# per grid cell]'):
+    l,b,w,h = ax.get_position().bounds
+    cbax = fig.add_axes([l,b-0.1,scale_width*w,0.02])
+    cbar = plt.colorbar(c,ticks=ranges,orientation='horizontal',cax=cbax)
+    cbar.ax.set_xticklabels(ticklabels)
+    cbar.set_label(cbarlabel)
+    return cbar
 
 def _iot_basic_map(ax, xmarkers='bottom', ymarkers='left', lon_range=None, lat_range=None):
     if lon_range is None:
@@ -109,6 +111,26 @@ def _get_sorted_river_contribution_info(lon_main_sources,
                 for j in range(len(lon_org)):
                     f.write(f'{lon_org[j]}, {lat_org[j]}, {waste_org[j]}\n')
     return x, percentage_waste_big_sources, colors_big_sources
+
+def _histogram_release_arrival(ax, n_release, n_entry, ylim=[0, 50]):
+    p_release = n_release/np.sum(n_release)*100
+    p_entry = n_entry/np.sum(n_entry)*100
+    months = np.arange(1,13,1)
+    colors = get_months_colors()
+    ax.bar(months-0.2, p_release, width=0.4, label='Release', color=colors,
+           hatch='////', edgecolor='k', zorder=5)
+    n_entry_cumulative = p_entry.cumsum(axis=1)
+    ax.bar(months+0.2, p_entry[:, 0], width=0.4, color=colors[0],
+           edgecolor='k', zorder=5)
+    for i in range(1, 11):
+        heights = n_entry_cumulative[:, i]        
+        starts = n_entry_cumulative[:, i-1]
+        ax.bar(months+0.2, p_entry[:, i], bottom=n_entry_cumulative[:, i-1],
+                width=0.4, color=colors[i], edgecolor='k', zorder=5)
+    ax.set_xticks(months)
+    ax.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
+    ax.set_ylabel('[% of particles]')
+    ax.set_ylim(ylim)
 
 def figure1_overview(output_path=None,
                      river_dir = get_dir('indonesia_rivers'),
@@ -222,7 +244,7 @@ def figure2_main_sources(river_names_cki=[], river_names_ci=[],
     ax1.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
     mplot1.points(lon_main_cki, lat_main_cki, marker='o', facecolor=main_colors_cki,
                  markersize=np.array(main_sizes_cki)*5, edgewidth=main_edgewidths_cki)
-    mplot1.add_subtitle(f'(a) Source locations and tracks of particles reaching\n   Cocos Keeling Islands (CKI)')
+    mplot1.add_subtitle(f'(a) Source locations and tracks of particles reaching\n     Cocos Keeling Islands (CKI)')
     ax1.set_anchor('W')
     # (c) main sources CI
     ax2 = plt.subplot(2, 3, (4, 5), projection=ccrs.PlateCarree())
@@ -234,7 +256,7 @@ def figure2_main_sources(river_names_cki=[], river_names_ci=[],
     ax2.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
     mplot2.points(lon_main_ci, lat_main_ci, marker='o', facecolor=main_colors_ci,
                  markersize=np.array(main_sizes_ci)*5, edgewidth=main_edgewidths_ci)
-    mplot2.add_subtitle(f'(c) Source locations and tracks of particles reaching\n   Christmas Island (CI)')
+    mplot2.add_subtitle(f'(c) Source locations and tracks of particles reaching\n     Christmas Island (CI)')
     # sources legend
     legend_entries = _get_legend_entries_for_main_sources()
     ax2.set_anchor('W')
@@ -252,7 +274,7 @@ def figure2_main_sources(river_names_cki=[], river_names_ci=[],
     ax3.set_xticks(xticks)
     ax3.set_xticklabels(river_names_cki, rotation='vertical')
     ax3.grid(False, axis='x')
-    anchored_text1 = AnchoredText(f'(b) Contributions of rivers to particles\n   reaching the CKI', loc='upper left', borderpad=0.0)
+    anchored_text1 = AnchoredText(f'(b) Contributions of rivers to particles\n     reaching the CKI', loc='upper left', borderpad=0.0)
     ax3.add_artist(anchored_text1)
     ax3.set_anchor('W')
     # (d) river contributions CI
@@ -267,163 +289,105 @@ def figure2_main_sources(river_names_cki=[], river_names_ci=[],
     ax4.set_xticks(xticks)
     ax4.set_xticklabels(river_names_ci, rotation='vertical')
     ax4.grid(False, axis='x')
-    anchored_text2 = AnchoredText(f'(d) Contributions of rivers to particles\n   reaching CI', loc='upper left', borderpad=0.0)
+    anchored_text2 = AnchoredText(f'(d) Contributions of rivers to particles\n     reaching CI', loc='upper left', borderpad=0.0)
     ax4.add_artist(anchored_text2)
     ax4.set_anchor('W')
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-def particle_tracks_and_main_sources(iot_island='cki', river_names = [], ylim_rivers = [5, 210],
-                                     output_path=None, plot_style='plot_tools/plot.mplstyle'):
+def figure3_release_arrival_histograms(output_path=None, plot_style='plot_tools/plot.mplstyle',
+                                       river_names = ['Serayu', 'Progo', 'Tanduy', 'Wulan', 'Bogowonto'],
+                                       river_lons = [109.1125, 110.2125, 108.7958333, 108.1458333, 110.0291667],
+                                       river_lats = [-7.679166667, -7.979166667, -7.670833333, -7.779166667, -7.895833333],
+                                       river_styles=['-', '-.', ':', '--', '-'],
+                                       river_colors=['k', 'k', 'k', 'k', '#bfbfbf']):
     particles = BeachingParticles.read_from_netcdf(get_dir('iot_input'))
-    if iot_island == 'cki':
-        box_lon, box_lat = get_cki_box_lon_lat_range()
-        iot_short_name = 'CKI'
-        iot_long_name = 'Cocos Keeling Islands'
-    elif iot_island == 'christmas':
-        box_lon, box_lat = get_christmas_box_lon_lat_range()
-        iot_short_name = 'CI'
-        iot_long_name = 'Christmas Island'
-    else:
-        raise ValueError(f'Unknown iot_island {iot_island}, valid options are: cki and christmas.')
-    l_box = get_l_particles_in_box(particles, iot_island)
+    cki_n_release, _, cki_n_entry = get_n_particles_per_month_release_arrival(particles, 'cki')
+    ci_n_release, _, ci_n_entry = get_n_particles_per_month_release_arrival(particles, 'christmas')
+    all_sources = RiverSources.read_from_shapefile()
+    river_waste = []
+    for i in range(len(river_names)):
+        i_river = np.where(np.logical_and(all_sources.lon==river_lons[i], all_sources.lat==river_lats[i]))
+        river_waste.append(np.squeeze(all_sources.waste[i_river]))
+        
     plt.style.use(plot_style)
-    fig = plt.figure(figsize=(6,4))
-    plt.subplots_adjust(hspace=0.1)
-    land_color = '#cfcfcf'
-    # --- (a) tracks and all sources ---
-    ax1 = plt.subplot(2, 2, 1, projection=ccrs.PlateCarree())
-    # tracks
-    not_in_box_color = '#626262'
-    in_box_color = '#A21E1E'
-    mplot1 = _iot_basic_map(ax1, xmarkers='off')
-    mplot1.ax.set_xticklabels([])
-    mplot1.tracks(particles.lon[~l_box, :], particles.lat[~l_box, :], color=not_in_box_color, linewidth=0.2)
-    mplot1.tracks(particles.lon[l_box, :], particles.lat[l_box, :], color=in_box_color, linewidth=0.2)
-    mplot1.box(box_lon, box_lat, linewidth=0.5)
-    ax1.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
-    # sources
-    iot_sources = get_iot_sources()
-    iot_yearly_waste = np.sum(iot_sources.waste,axis=1)
-    i_use = np.where(iot_yearly_waste >= 1)
-    iot_yearly_waste = iot_yearly_waste[i_use]
-    lon_sources = iot_sources.lon[i_use]
-    lat_sources = iot_sources.lat[i_use]
-    (source_colors,
-    source_sizes,
-    source_edgewidths) = _get_marker_colors_sizes_edgewidths_for_sources(iot_yearly_waste)
-    mplot1.points(lon_sources,lat_sources,marker='o',facecolor=source_colors,
-                  markersize=np.array(source_sizes),edgewidth=source_edgewidths)    
-    # legends
-    legend_entries = _get_legend_entries_for_sources()
-    ax1.set_anchor('W')
-    legend1 = plt.legend(handles=legend_entries, title='Plastic sources\n[tonnes/year]', loc='upper right',
-                         bbox_to_anchor=(1.0, 1.0))
-    ax1.add_artist(legend1)
-    legend_entries_tracks = [Line2D([0], [0], color=in_box_color, label=f'Reach {iot_short_name}'),
-                             Line2D([0], [0], color=not_in_box_color, label=f'Do not reach {iot_short_name}')]
-    ax1.legend(handles=legend_entries_tracks, loc='lower right', bbox_to_anchor=(1.0, 0.0))
-    # title
-    mplot1.add_subtitle(f'(a) Particle tracks around {iot_long_name} ({iot_short_name})')
-    # --- (b) main sources ---
-    ax2 = plt.subplot(2, 2, 3, projection=ccrs.PlateCarree())
-    mplot2 = _iot_basic_map(ax2)
-    lon_main_sources, lat_main_sources, waste_main_sources = get_main_sources_lon_lat_n_particles(particles, iot_island)
-    (main_source_colors,
-    main_source_sizes,
-    main_source_edgewidths) = _get_marker_colors_sizes_edgewidths_for_main_sources(waste_main_sources)
-    mplot2.points(lon_main_sources, lat_main_sources, marker='o', facecolor=main_source_colors,
-                 markersize=np.array(main_source_sizes)*5, edgewidth=main_source_edgewidths)
-    mplot2.box(box_lon, box_lat, linewidth=0.5)
-    ax2.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
+    fig = plt.figure(figsize=(5,4))
+    plt.rcParams['font.size'] = 5
+    plt.rcParams['axes.labelsize'] = 5
+
+    ax1 = plt.subplot(2, 2, (1, 2))
+    for i in range(len(river_names)):
+        ax1.plot(all_sources.time, river_waste[i], label=river_names[i], color=river_colors[i], linestyle=river_styles[i])
+    ax1.set_xticks(all_sources.time)
+    ax1.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
+    ax1.set_xlim(1, 12)
+    ax1.set_yticks(np.arange(0, 3000, 500))
+    ax1.set_ylim(0, 3000)
+    ax1.set_ylabel('Plastic waste entering ocean [tonnes]')
+    ax1.legend(loc='upper right', bbox_to_anchor=(1.18, 1.0))
+    anchored_text1 = AnchoredText(f'(a) Seasonal input of plastic waste from 5 main polluting rivers', loc='upper left', borderpad=0.0)
+    ax1.add_artist(anchored_text1)
+
+    ax2 = plt.subplot(2, 2, 3)
+    _histogram_release_arrival(ax2, cki_n_release, cki_n_entry)
+    anchored_text2 = AnchoredText(f'(b) Seasonality of particles reaching Cocos Keeling Islands', loc='upper left', borderpad=0.0)
+    ax2.add_artist(anchored_text2)
     # legend
-    legend_entries_main = _get_legend_entries_for_main_sources()
-    ax2.set_anchor('W')
-    ax2.legend(handles=legend_entries_main, title='Main sources\n[# particles]', loc='upper right',
-                bbox_to_anchor=(1.0, 1.0))
-    # title
-    mplot2.add_subtitle(f'(b) Source locations of particles reaching {iot_short_name}')
-    # --- (c) histogram rivers ---
-    ax3 = plt.subplot(2, 2, (2,4))
-    i_sort = np.argsort(waste_main_sources)[::-1]
-    i_5ormore = np.where(waste_main_sources[i_sort] >= 5)
-    waste_big_sources = waste_main_sources[i_sort][i_5ormore]
-    lon_big_sources = lon_main_sources[i_sort][i_5ormore]
-    lat_big_sources = lat_main_sources[i_sort][i_5ormore]
-    colors_big_sources = np.array(main_source_colors)[i_sort][i_5ormore]
-    i_biggest_sources = waste_big_sources >= 50
-    lon_biggest_sources = lon_big_sources[i_biggest_sources]
-    lat_biggest_sources = lat_big_sources[i_biggest_sources]
-    waste_biggest_sources = waste_big_sources[i_biggest_sources]
-    if river_names == []:
-    # print lon and lat of rivers contributing >50 particles (to find names and add to labels)
-        print('Locations of largest sources (> 50 particles):')
-        for i in range(len(lon_biggest_sources)):
-            print(f'{lon_biggest_sources[i]}, {lat_biggest_sources[i]}, {waste_biggest_sources[i]}')
-    # plot
-    ax3.bar(np.arange(0, len(waste_big_sources)), waste_big_sources, color=colors_big_sources, zorder=5)
-    ax3.set_ylabel('Particles [#]')
-    ax3.set_ylim(ylim_rivers)
-    yticks = np.arange(0, ylim_rivers[1], 20)
-    yticks[0] = ylim_rivers[0]
-    ax3.set_yticks(yticks)
-    # river names
-    xticks = np.arange(0, len(i_biggest_sources))
-    ax3.set_xticks(xticks)
-    xlabels = river_names
-    for i in range(len(xticks)-len(river_names)):
-        xlabels.append('')
-    ax3.set_xticklabels(xlabels, rotation='vertical')
-    # title
-    anchored_text = AnchoredText(f'(c) Contributions of rivers to particles reaching {iot_short_name}', loc='upper left', borderpad=0.0)
-    ax3.add_artist(anchored_text)
-    # make ax3 a bit shorter
-    l3, b3, w3, h3 = ax3.get_position().bounds
-    ax3.set_position([l3, b3+(0.25*h3)/2, w3, 0.75*h3])
+    legend_elements = [Patch(facecolor='w', edgecolor='k', hatch='//////', label='Release'),
+                       Patch(facecolor='w', edgecolor='k', label='Arrival')]
+    ax2.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(0.0, 0.91))
+
+    ax3 = plt.subplot(2, 2, 4)
+    _histogram_release_arrival(ax3, ci_n_release, ci_n_entry)
+    ax3.yaxis.set_label_position('right')
+    ax3.yaxis.tick_right()
+    anchored_text3 = AnchoredText(f'(c) Seasonality of particles reaching Christmas Island', loc='upper left', borderpad=0.0)
+    ax3.add_artist(anchored_text3)
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-def release_arrival_histogram(iot_island='cki', ylim=[0, 350], output_path=None, plot_style='plot_tools/plot.mplstyle'):
-    particles = BeachingParticles.read_from_netcdf(get_dir('iot_input'))
-    months = np.arange(1,13,1)
-    n_release, _, n_entry = get_n_particles_per_month_release_arrival(particles, iot_island)
-    colors = get_months_colors()
-    if iot_island == 'cki':
-        iot_short_name = 'CKI'
-        iot_long_name = 'Cocos Keeling Islands'
-    elif iot_island == 'christmas':
-        iot_short_name = 'CI'
-        iot_long_name = 'Christmas Island'
-    else:
-        raise ValueError(f'Unknown iot_island {iot_island}, valid options are: cki and christmas.')
+def figure4_seasonal_density(output_path=None, plot_style='plot_tools/plot.mplstyle'):
+    input_path = get_dir('iot_input_density')
+    lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
+    lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
     plt.style.use(plot_style)
-    fig = plt.figure(figsize=(3,4))
-    ax = plt.gca()
-    ax.bar(months-0.2, n_release, width=0.4, label='Release', color=colors,
-           hatch='////', edgecolor='k', zorder=5)
-    n_entry_cumulative = n_entry.cumsum(axis=1)
-    ax.bar(months+0.2, n_entry[:, 0], width=0.4, color=colors[0],
-           edgecolor='k', zorder=5)
-    for i in range(1, 11):
-        heights = n_entry_cumulative[:, i]        
-        starts = n_entry_cumulative[:, i-1]
-        ax.bar(months+0.2, n_entry[:, i], bottom=n_entry_cumulative[:, i-1],
-                width=0.4, color=colors[i], edgecolor='k', zorder=5)
-    ax.set_xticks(months)
-    ax.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
-    ax.set_ylabel('Particles [#]')
-    ax.set_ylim(ylim)
-    # legend
-    legend_elements = [Patch(facecolor='w', edgecolor='k', hatch='//////', label='Release'),
-                       Patch(facecolor='w', edgecolor='k', label=f'{iot_short_name} arrival')]
-    ax.legend(handles=legend_elements, loc='upper right')
-    # title
-    anchored_text = AnchoredText(f'Seasonality of particles reaching {iot_long_name} ({iot_short_name})', loc='upper left', borderpad=0.0)
-    ax.add_artist(anchored_text)
+    fig = plt.figure(figsize=(6,6))
+    for i in range(12):
+        start_date = datetime(2008, i+1, 1)
+        end_date = add_month_to_timestamp(start_date, 1)
+        density = Density.read_from_netcdf(input_path, time_start=start_date, time_end=end_date)
+        z = np.mean(density.density, axis=0)
+        z[z==0] = np.nan
+        lon = density.grid.lon
+        lat = density.grid.lat
+        ax = plt.subplot(4, 3, i+1, projection=ccrs.PlateCarree())
+        if i in [0, 3, 6]:
+            mplot = _iot_basic_map(ax, xmarkers='off')
+            ax.tick_params(axis='both', which='both', length=0)
+            ax.set_xticklabels([])
+        elif i in [10, 11]:
+            mplot = _iot_basic_map(ax, ymarkers='off')
+            ax.tick_params(axis='both', which='both', length=0)
+            ax.set_yticklabels([])
+        elif i == 9:
+            mplot = _iot_basic_map(ax)
+            ax.tick_params(axis='both', which='both', length=0)
+        else:
+            mplot = _iot_basic_map(ax, xmarkers='off', ymarkers='off')
+            ax.tick_params(axis='both', which='both', length=0)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+        c, ranges = mplot.pcolormesh(lon, lat, z, show_cbar=False)
+        mplot.box(lon_range_cki, lat_range_cki, linewidth=0.5)
+        mplot.box(lon_range_ci, lat_range_ci, linewidth=0.5)
+        if i == 9:
+            _add_horizontal_colorbar(fig, ax, c, ranges, scale_width=3.3)
+        mplot.add_subtitle(f'({string.ascii_lowercase[i]}) {start_date.strftime("%b")}')
+    # save
     if output_path:
-        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+        plt.savefig(output_path,bbox_inches='tight',dpi=300)
     plt.show()
 
 def hycom_velocities(input_path, thin=6, scale=10,
@@ -446,7 +410,10 @@ def hycom_velocities(input_path, thin=6, scale=10,
     plt.show()
 
 if __name__ == '__main__':
-    # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
-    river_names_cki = ['Serayu', 'Brogowonto', 'Tanduy', 'Progo']
+    figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
+    river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
     river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
     figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
+    figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
+    figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+
