@@ -1,4 +1,4 @@
-from utilities import get_closest_index, add_month_to_timestamp, get_dir
+from utilities import get_closest_index, add_month_to_timestamp, get_dir, get_distance_between_points
 import numpy as np
 import shapefile
 from shapely.geometry import Point
