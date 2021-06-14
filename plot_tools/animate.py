@@ -1,5 +1,6 @@
 from plot_tools.map_plotter import MapPlot
 from processing import get_beached_particles_path, get_particles_path
+from pts_parcels_xpresspearl import get_release_time_lon_lat as get_xpresspearl_release_time_lon_lat
 from utilities import get_dir
 from ocean_utilities import get_io_lon_lat_range
 from particles import BeachingParticles, Density
@@ -38,8 +39,8 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
     ax.set_extent([lon_range[0],lon_range[1],lat_range[0],lat_range[1]],ccrs.PlateCarree())    
     # plot legend
     if plot_legend:
-        legend_elements = [Line2D([0],[0],marker='o',markersize=10,color='w',markerfacecolor='#000000',label='drifting'),                        
-                           Line2D([0],[0],marker='o',markersize=10,color='w',markerfacecolor='#EA5622',label='beached')]
+        legend_elements = [Line2D([0],[0],marker='o',markersize=10,color='k',markerfacecolor='#000000',label='drifting'),                        
+                           Line2D([0],[0],marker='o',markersize=10,color='#EA5622',markerfacecolor='#EA5622',label='beached')]
         ax.legend(handles=legend_elements,loc='upper right')
     # add logo
     if add_uwa_logo:
@@ -54,7 +55,7 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
     point_o = ax.plot([],[],marker='o',color='k',markersize=0.4,linestyle=None,linewidth=0)[0]
     point_b = ax.plot([],[],'.',markersize=0.4,color='#EA5622',fillstyle='full')[0]
     # animated text
-    ttl = ax.text(0.97,0.92,'',transform=ax.transAxes,ha='right',bbox=dict(facecolor='w', alpha=0.3, edgecolor='w',pad=2))
+    ttl = ax.text(0.5,0.92,'',transform=ax.transAxes,ha='left',bbox=dict(facecolor='w', alpha=0.3, edgecolor='w',pad=2))
     ttl.set_animated(True)
     
     def init():
@@ -77,8 +78,13 @@ def create_animation_beached(time,lon,lat,beached,p,output_name=None,
             title = f'Beaching: $\Delta$x = 8 km, p = {p}\nSimulation duration: {passed_years} years, {passed_months} months, {passed_days} days'
         elif title_style == 'time_passed':
             title = f'Simulation duration: {passed_years} years, {passed_months} months, {passed_days} days'
-        else:
+        elif title_style == 'time_passed_simple':
+            title = f'{passed_years} years, {passed_months} months'
+        elif title_style == 'month':
             title = time[i].strftime('%B')
+        else:
+            raise ValueError(f'''Unknown title style requested: {title_style}.
+                             Valid options are: time_passed, time_passed_simple, month.''')
         ttl.set_text(title)
         return point_o,point_b,ttl
 
@@ -132,3 +138,14 @@ def cocos_keeling_islands_animation():
                              text='Cocos Keeling\nIslands', text_lon=97., text_lat=-13.,
                              point=True, point_lon=96.86, point_lat=-12.14,
                              dpi=150, fps=4, title_style='month')
+
+def xpresspearl_animation():
+    particles = BeachingParticles.read_from_netcdf(get_dir('xpresspearl_output')+'particles_2008-2009.nc')
+    output_name = 'xpresspearl'
+    lon_range = [40, 120]
+    lat_range = [-20, 40]
+    _, lon0, lat0 = get_xpresspearl_release_time_lon_lat()
+    create_animation_beached(particles.time, particles.lon, particles.lat, None, None,
+                             lon_range=lon_range, lat_range=lat_range,
+                             output_name=output_name, point=True, point_lon=lon0, point_lat=lat0,
+                             dpi=300, fps=5, title_style='time_passed_simple')
