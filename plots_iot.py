@@ -459,17 +459,17 @@ def plastic_measurements(plastic_type='count', output_path=None, plot_style='plo
     else:
         raise ValueError(f'Unknown plastic type requested: {plastic_type}. Valid values are: count and mass.')
     for i, t in enumerate(time_cki):
-        n_months_cki[t.month] += 1
+        n_months_cki[t.month-1] += 1
         if plastic_type == 'count':
-            n_plastic_month_cki[t.month] += n_plastic_cki[i]
+            n_plastic_month_cki[t.month-1] += n_plastic_cki[i]
         elif plastic_type == 'mass':
-            n_plastic_month_cki[t.month] += kg_plastic_cki[i]
+            n_plastic_month_cki[t.month-1] += kg_plastic_cki[i]
     for i, t in enumerate(time_ci):
-        n_months_ci[t.month] += 1
+        n_months_ci[t.month-1] += 1
         if plastic_type == 'count':
-            n_plastic_month_ci[t.month] += n_plastic_ci[i]
+            n_plastic_month_ci[t.month-1] += n_plastic_ci[i]
         elif plastic_type == 'mass':
-            n_plastic_month_ci[t.month] += kg_plastic_ci[i]
+            n_plastic_month_ci[t.month-1] += kg_plastic_ci[i]
     (main_colors_cki,
     main_sizes_cki,
     main_edgewidths_cki) = _get_marker_colors_sizes_for_samples(samples_cki, plastic_type)
