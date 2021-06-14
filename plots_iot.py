@@ -23,7 +23,7 @@ def get_months_colors():
     return colors
 
 def _add_horizontal_colorbar(fig,ax,c,ranges,scale_width=1,
-                             ticklabels=['1','10','10$^2$','10$^3$','10$^4$','10$^5$','10$^6$'],
+                             ticklabels=['1','10','10$^2$','10$^3$','10$^4$'],
                              cbarlabel = 'Particle density [# per grid cell]'):
     l,b,w,h = ax.get_position().bounds
     cbax = fig.add_axes([l,b-0.1,scale_width*w,0.02])
@@ -379,7 +379,7 @@ def figure4_seasonal_density(output_path=None, plot_style='plot_tools/plot.mplst
             ax.tick_params(axis='both', which='both', length=0)
             ax.set_xticklabels([])
             ax.set_yticklabels([])
-        c, ranges = mplot.pcolormesh(lon, lat, z, show_cbar=False)
+        c, ranges = mplot.pcolormesh(lon, lat, z, ranges=[1,10,100,10**3,10**4], show_cbar=False)
         mplot.box(lon_range_cki, lat_range_cki, linewidth=0.5)
         mplot.box(lon_range_ci, lat_range_ci, linewidth=0.5)
         if i == 9:
