@@ -176,7 +176,7 @@ def process_specific_file_density(input_path, output_path, dx_grid=0.5):
     density = Density.create_from_particles(grid, particles)
     _write_density_to_netcdf(density, output_path)
 
-def process_specific_file_particles_in_lon_lat_range(input_path, output_path, lon_range, lat_range, t_interval=1):
+def process_specific_file_particles_in_lon_lat_range(input_path, output_path, lon_range=None, lat_range=None, t_interval=1):
     if type(input_path) == list:
         particles = BeachingParticles.read_from_parcels_netcdf(input_path[0], t_interval=t_interval)
         for i in range(len(input_path)-1):
@@ -190,17 +190,15 @@ def process_specific_file_particles_in_lon_lat_range(input_path, output_path, lo
         _write_to_netcdf(particles, output_path)
 
 if __name__ == '__main__':
-    # basin_names = ['io_nh','io_sh']
-    # dx,_ = get_defaults()
-    # ps = get_probabilities()
-    # for basin_name in basin_names:
-    #     particles = process_particles(basin_name=basin_name)
-    #     process_density(particles,basin_name=basin_name)
-    #     for p in ps:
-    #         beached_particles = process_beached_particles(particles,dx,p,basin_name=basin_name)
-    #         process_beached_density(beached_particles,dx,p,basin_name=basin_name)
-    #         beached_particles = None
-    #     particles = None
-    input_path = '/mnt/i/data/pts/io_river_sources/processed/iot_particles_2008.nc'
-    output_path = '/mnt/i/data/pts/io_river_sources/processed/iot_density_2008.nc'
-    process_specific_file_density(input_path, output_path)
+    basin_names = ['io_nh','io_sh']
+    dx,_ = get_defaults()
+    ps = get_probabilities()
+    for basin_name in basin_names:
+        particles = process_particles(basin_name=basin_name)
+        process_density(particles,basin_name=basin_name)
+        for p in ps:
+            beached_particles = process_beached_particles(particles,dx,p,basin_name=basin_name)
+            process_beached_density(beached_particles,dx,p,basin_name=basin_name)
+            beached_particles = None
+        particles = None
+    

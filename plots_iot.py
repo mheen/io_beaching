@@ -6,6 +6,7 @@ from ocean_utilities import read_mean_hycom_data
 from postprocessing_iot import get_l_particles_in_box, get_cki_box_lon_lat_range, get_christmas_box_lon_lat_range
 from postprocessing_iot import get_iot_lon_lat_range, get_iot_sources, get_main_sources_lon_lat_n_particles
 from postprocessing_iot import get_original_source_based_on_lon0_lat0, get_n_particles_per_month_release_arrival
+from postprocessing_iot import get_cki_plastic_measurements, get_christmas_plastic_measurements, get_cki_box_lon_lat_range, get_christmas_box_lon_lat_range
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.lines import Line2D
@@ -32,19 +33,17 @@ def _add_horizontal_colorbar(fig,ax,c,ranges,scale_width=1,
     cbar.set_label(cbarlabel)
     return cbar
 
-def _iot_basic_map(ax, xmarkers='bottom', ymarkers='left', lon_range=None, lat_range=None):
+def _iot_basic_map(ax, xmarkers='bottom', ymarkers='left', lon_range=None, lat_range=None, dlon=4, dlat=2):
     if lon_range is None:
         lon_range, _ = get_iot_lon_lat_range()
         meridians = [90, 100, 110, 120, 128]        
     else:
-        dlon = 4
-        meridians = np.arange(lon_range[0], lon_range[1]+dlon, dlon)
+        meridians = np.arange(lon_range[0], lon_range[1], dlon)
     if lat_range is None:
         _, lat_range = get_iot_lon_lat_range()
         parallels = [-20, -15, -10, -5, 0, 5]
     else:
-        dlat = 2
-        parallels = np.arange(lat_range[0], lat_range[1]+dlat, dlat)    
+        parallels = np.arange(lat_range[0], lat_range[1], dlat)    
     mplot = MapPlot(ax, lon_range, lat_range, meridians=meridians, parallels=parallels,
                     xmarkers=xmarkers, ymarkers=ymarkers)
     return mplot
@@ -57,6 +56,25 @@ def _main_source_info():
     sizes = [6,5,4,3,2,1]
     legend_sizes = [6,5,4,3,2,1]
     return (ranges,labels,colors,edge_widths,sizes,legend_sizes)
+
+def _samples_info(plastic_type):
+    if plastic_type == 'count':
+        ranges = np.array([66000, 50000, 5000, 500, 50, 1])
+        labels = ['>50000', '5000 - 50000', '500 - 5000', '50 - 500', '1 - 50']
+        colors = get_colormap_reds(len(ranges)-1)[::-1]
+        edge_widths = [0.7, 0.7, 0.7, 0.5, 0.5]
+        sizes = [5, 4, 3, 2, 1]
+        legend_sizes = [5, 4, 3, 2, 1]
+    elif plastic_type == 'mass':
+        ranges = np.array([2000, 1500, 1000, 500, 100, 50, 1])
+        labels = ['>1500', '1000 - 1500', '500 - 1000', '100 - 500', '50 - 100', '1 - 50']
+        colors = get_colormap_reds(len(ranges)-1)[::-1]
+        edge_widths = [0.7, 0.7, 0.7, 0.7, 0.5, 0.5]
+        sizes = [6, 5, 4, 3, 2, 1]
+        legend_sizes = [6, 5, 4, 3, 2, 1]
+    else:
+        raise ValueError(f'Unknown plastic type requested: {plastic_type}. Valid options are: count and mass.')
+    return (ranges, labels, colors, edge_widths, sizes, legend_sizes)
 
 def _get_marker_colors_sizes_edgewidths_for_main_sources(waste_input):
     (ranges,_,colors,edge_widths,sizes,_) = _main_source_info()
@@ -73,8 +91,33 @@ def _get_marker_colors_sizes_edgewidths_for_main_sources(waste_input):
         source_edge_widths.append(edge_widths[i_range])
     return source_colors,source_sizes,source_edge_widths
 
+def _get_marker_colors_sizes_for_samples(samples, plastic_type):
+    ranges, _, colors, edge_widths, sizes, _ = _samples_info(plastic_type)
+    sample_colors = []
+    sample_sizes = []
+    sample_edge_widths = []
+    for sample in samples:
+        if np.isnan(sample):
+            continue
+        l_range = []
+        for i in range(len(colors)):
+            l_range.append(ranges[i]>=sample>=ranges[i+1])
+        i_range = np.where(l_range)[0][0]
+        sample_colors.append(colors[i_range])
+        sample_sizes.append(sizes[i_range])
+        sample_edge_widths.append(edge_widths[i_range])
+    return sample_colors, sample_sizes, sample_edge_widths
+
 def _get_legend_entries_for_main_sources():
     (_,labels,colors,edge_widths,_,legend_sizes) = _main_source_info()
+    legend_entries = []
+    for i in range(len(colors)):
+        legend_entries.append(Line2D([0],[0],marker='o',color='w',markerfacecolor=colors[i],                              
+                              markersize=legend_sizes[i],label=labels[i],markeredgewidth=edge_widths[i]))
+    return legend_entries
+
+def _get_legend_entries_samples(plastic_type):
+    _, labels, colors, edge_widths, _, legend_sizes = _samples_info(plastic_type)
     legend_entries = []
     for i in range(len(colors)):
         legend_entries.append(Line2D([0],[0],marker='o',color='w',markerfacecolor=colors[i],                              
@@ -390,6 +433,125 @@ def figure4_seasonal_density(output_path=None, plot_style='plot_tools/plot.mplst
         plt.savefig(output_path,bbox_inches='tight',dpi=300)
     plt.show()
 
+def plastic_measurements(plastic_type='count', output_path=None, plot_style='plot_tools/plot.mplstyle'):
+    time_cki, lon_cki, lat_cki, n_plastic_cki, kg_plastic_cki = get_cki_plastic_measurements()
+    time_ci, lon_ci, lat_ci, n_plastic_ci, kg_plastic_ci = get_christmas_plastic_measurements()
+    n_plastic_month_cki = np.zeros(12)
+    n_months_cki = np.zeros(12)
+    n_plastic_month_ci = np.zeros(12)
+    n_months_ci = np.zeros(12)
+    if plastic_type == 'count':
+        samples_cki = n_plastic_cki
+        samples_ci = n_plastic_ci
+        ylabel = 'Plastic items [#]'
+        ylim = [0, 140000]
+        yticks = np.arange(0, 140000, 20000)
+        ylim_studies = [0, 14]
+        yticks_studies = np.arange(0, 14, 2)
+    elif plastic_type == 'mass':
+        samples_cki = kg_plastic_cki
+        samples_ci = kg_plastic_ci
+        ylabel = 'Plastic weight [kg]'
+        ylim = [0, 4000]
+        yticks = np.arange(0, 4000, 500)
+        ylim_studies = [0, 16]
+        yticks_studies = np.arange(0, 16, 2)
+    else:
+        raise ValueError(f'Unknown plastic type requested: {plastic_type}. Valid values are: count and mass.')
+    for i, t in enumerate(time_cki):
+        n_months_cki[t.month] += 1
+        if plastic_type == 'count':
+            n_plastic_month_cki[t.month] += n_plastic_cki[i]
+        elif plastic_type == 'mass':
+            n_plastic_month_cki[t.month] += kg_plastic_cki[i]
+    for i, t in enumerate(time_ci):
+        n_months_ci[t.month] += 1
+        if plastic_type == 'count':
+            n_plastic_month_ci[t.month] += n_plastic_ci[i]
+        elif plastic_type == 'mass':
+            n_plastic_month_ci[t.month] += kg_plastic_ci[i]
+    (main_colors_cki,
+    main_sizes_cki,
+    main_edgewidths_cki) = _get_marker_colors_sizes_for_samples(samples_cki, plastic_type)
+    (main_colors_ci,
+    main_sizes_ci,
+    main_edgewidths_ci) = _get_marker_colors_sizes_for_samples(samples_ci, plastic_type)
+    
+    plt.style.use(plot_style)
+    fig = plt.figure(figsize=(8, 6))
+
+    months = np.arange(1,13,1)
+    colors = get_months_colors()
+    color = '#adadad'
+    land_color = '#cfcfcf'
+    # (a) seasonal distribution measured plastic CKI
+    ax1 = plt.subplot(2, 2, 1)
+    ax1.bar(months-0.2, n_plastic_month_cki, width=0.4, color=colors, edgecolor='k', zorder=5)
+    ax1.set_xticks(months)
+    ax1.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
+    ax1.set_ylim(ylim)
+    ax1.set_yticks(yticks)
+    ax1.set_ylabel(ylabel)
+    anchored_text1 = AnchoredText(f'(a) Plastic samples from Cocos Keeling Islands (CKI)', loc='upper left', borderpad=0.0)
+    ax1.add_artist(anchored_text1)
+    # number of sampling studies per month
+    ax2 = ax1.twinx()
+    ax2.grid(False)
+    ax2.bar(months+0.2, n_months_cki, width=0.4, color=color, edgecolor='k', zorder=6)
+    ax2.set_ylim(ylim_studies)
+    ax2.set_yticks(yticks_studies)
+    ax2.set_ylabel('Sampling studies [#]')
+    ax2.spines['right'].set_color(color)
+    ax2.tick_params(axis='y', colors=color)
+    ax2.yaxis.label.set_color(color)
+    # (b) seasonal distribution measured plastic CI
+    ax3 = plt.subplot(2, 2, 3)
+    ax3.bar(months-0.2, n_plastic_month_ci, width=0.4, color=colors, edgecolor='k', zorder=5)
+    ax3.set_xticks(months)
+    ax3.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
+    ax3.set_ylim(ylim)
+    ax3.set_yticks(yticks)
+    ax3.set_ylabel(ylabel)
+    anchored_text2 = AnchoredText(f'(b) Plastic samples from Christmas Island (CI)', loc='upper left', borderpad=0.0)
+    ax3.add_artist(anchored_text2)
+    # number of sampling studies per month
+    ax4 = ax3.twinx()
+    ax4.grid(False)
+    ax4.bar(months+0.2, n_months_ci, width=0.4, color=color, edgecolor='k', zorder=6)
+    ax4.set_ylim(ylim_studies)
+    ax4.set_yticks(yticks_studies)
+    ax4.set_ylabel('Sampling studies [#]')
+    ax4.spines['right'].set_color(color)
+    ax4.tick_params(axis='y', colors=color)
+    ax4.yaxis.label.set_color(color)
+    # (c) map of measured plastic CKI
+    ax5 = plt.subplot(2, 2, 2, projection=ccrs.PlateCarree())
+    lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
+    mplot1 = _iot_basic_map(ax5, lon_range=lon_range_cki, lat_range=lat_range_cki, dlon=0.2, dlat=0.1)
+    l_nonan_cki = ~np.isnan(samples_cki)
+    mplot1.points(lon_cki[l_nonan_cki], lat_cki[l_nonan_cki], facecolor=main_colors_cki, edgecolor='k', marker='o',
+                  markersize=np.array(main_sizes_cki)*5, edgewidth=main_edgewidths_cki)
+    anchored_text3 = AnchoredText(f'(c) Sampled plastics on CKI', loc='upper left', borderpad=0.0)
+    anchored_text3.zorder = 8
+    ax5.add_artist(anchored_text3)
+    # (d) map of measured plastic CI
+    ax6 = plt.subplot(2, 2, 4, projection=ccrs.PlateCarree())
+    lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
+    mplot2 = _iot_basic_map(ax6, lon_range=lon_range_ci, lat_range=lat_range_ci, dlon=0.2, dlat=0.1)
+    l_nonan_ci = ~np.isnan(samples_ci)
+    mplot2.points(lon_ci[l_nonan_ci], lat_ci[l_nonan_ci], facecolor=main_colors_ci, edgecolor='k', marker='o',
+                  markersize=np.array(main_sizes_ci)*5, edgewidth=main_edgewidths_ci)
+    anchored_text4 = AnchoredText(f'(d) Sampled plastics on CI', loc='upper left', borderpad=0.0)
+    ax6.add_artist(anchored_text4)
+    # legend
+    legend_entries = _get_legend_entries_samples(plastic_type)
+    ax5.legend(handles=legend_entries, loc='upper left', title=ylabel,
+                bbox_to_anchor=(1.1, 1.0))
+    # save
+    if output_path:
+        plt.savefig(output_path,bbox_inches='tight',dpi=300)
+    plt.show()
+
 def hycom_velocities(input_path, thin=6, scale=10,
                      output_path=None,
                      plot_style='plot_tools/plot.mplstyle'):
@@ -416,4 +578,3 @@ if __name__ == '__main__':
     figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
     figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
-

@@ -1,7 +1,8 @@
 from plastic_sources import RiverSources
 from particles import BeachingParticles
-from utilities import get_index_closest_point
+from utilities import get_index_closest_point, get_dir
 import numpy as np
+import pandas as pd
 
 def get_iot_lon_lat_range():
     lon_range = [90., 128.]
@@ -27,6 +28,31 @@ def get_christmas_box_lon_lat_range():
     lon_range = [105.4, 105.9]
     lat_range = [-10.7, -10.2]
     return (lon_range, lat_range)
+
+def get_christmas_plastic_measurements(input_path=get_dir('iot_measurements')):
+    time, lon, lat, n_plastic, kg_plastic = get_iot_plastic_measurements()
+    lon_range, lat_range = get_christmas_box_lon_lat_range()
+    l_lon = np.logical_and(lon_range[0]<=lon, lon<=lon_range[1])
+    l_lat = np.logical_and(lat_range[0]<=lat, lat<=lat_range[1])
+    l_ci = np.logical_and(l_lon, l_lat)
+    return time[l_ci], lon[l_ci], lat[l_ci], n_plastic[l_ci], kg_plastic[l_ci]
+
+def get_cki_plastic_measurements(input_path=get_dir('iot_measurements')):
+    time, lon, lat, n_plastic, kg_plastic = get_iot_plastic_measurements()
+    lon_range, lat_range = get_cki_box_lon_lat_range()
+    l_lon = np.logical_and(lon_range[0]<=lon, lon<=lon_range[1])
+    l_lat = np.logical_and(lat_range[0]<=lat, lat<=lat_range[1])
+    l_cki = np.logical_and(l_lon, l_lat)
+    return time[l_cki], lon[l_cki], lat[l_cki], n_plastic[l_cki], kg_plastic[l_cki]
+
+def get_iot_plastic_measurements(input_path=get_dir('iot_measurements')):
+    df = pd.read_excel(input_path, sheet_name='Event_details', skiprows=5)
+    time = np.array([d.to_pydatetime() for d in df['Date']])
+    lon = np.array(df['Longitude'])
+    lat = np.array(df['Latitude'])
+    n_plastic = np.array(df['Total'])
+    kg_plastic = np.array(df['Weight Kg'])
+    return time, lon, lat, n_plastic, kg_plastic
 
 def get_l_particles_in_box(particles: BeachingParticles, iot_island):
     if iot_island == 'cki':
