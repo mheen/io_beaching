@@ -461,15 +461,15 @@ def plastic_measurements(plastic_type='count', output_path=None, plot_style='plo
     for i, t in enumerate(time_cki):
         n_months_cki[t.month-1] += 1
         if plastic_type == 'count':
-            n_plastic_month_cki[t.month-1] += n_plastic_cki[i]
+            n_plastic_month_cki[t.month-1] = np.nansum([n_plastic_month_cki[t.month-1], n_plastic_cki[i]])
         elif plastic_type == 'mass':
-            n_plastic_month_cki[t.month-1] += kg_plastic_cki[i]
+            n_plastic_month_cki[t.month-1] = np.nansum([n_plastic_month_cki[t.month-1], kg_plastic_cki[i]])
     for i, t in enumerate(time_ci):
         n_months_ci[t.month-1] += 1
         if plastic_type == 'count':
-            n_plastic_month_ci[t.month-1] += n_plastic_ci[i]
+            n_plastic_month_ci[t.month-1] = np.nansum([n_plastic_month_ci[t.month-1], n_plastic_ci[i]])
         elif plastic_type == 'mass':
-            n_plastic_month_ci[t.month-1] += kg_plastic_ci[i]
+            n_plastic_month_ci[t.month-1] = np.nansum([n_plastic_month_ci[t.month-1], kg_plastic_ci[i]])
     (main_colors_cki,
     main_sizes_cki,
     main_edgewidths_cki) = _get_marker_colors_sizes_for_samples(samples_cki, plastic_type)
@@ -578,3 +578,5 @@ if __name__ == '__main__':
     figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
     figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+    plastic_measurements(plastic_type='count', output_path=get_dir('iot_plots')+'samples_count.jpg')
+    plastic_measurements(plastic_type='mass', output_path=get_dir('iot_plots')+'samples_mass.jpg')
