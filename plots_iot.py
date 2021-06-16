@@ -239,10 +239,11 @@ def figure1_overview(output_path=None,
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-def figure2_main_sources(river_names_cki=[], river_names_ci=[],
+def figure2_main_sources(input_path=get_dir('iot_input'),
+                         river_names_cki=[], river_names_ci=[],
                          ylim_cki=[0, 45], ylim_ci=[0, 45],
                          output_path=None, plot_style='plot_tools/plot.mplstyle'):
-    particles = BeachingParticles.read_from_netcdf(get_dir('iot_input'))
+    particles = BeachingParticles.read_from_netcdf(input_path)
     box_lon_cki, box_lat_cki = get_cki_box_lon_lat_range()
     box_lon_ci, box_lat_ci = get_christmas_box_lon_lat_range()
     l_box_cki = get_l_particles_in_box(particles, 'cki')
@@ -339,13 +340,14 @@ def figure2_main_sources(river_names_cki=[], river_names_ci=[],
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-def figure3_release_arrival_histograms(output_path=None, plot_style='plot_tools/plot.mplstyle',
+def figure3_release_arrival_histograms(input_path=get_dir('iot_input'),
+                                       output_path=None, plot_style='plot_tools/plot.mplstyle',
                                        river_names = ['Serayu', 'Progo', 'Tanduy', 'Wulan', 'Bogowonto'],
                                        river_lons = [109.1125, 110.2125, 108.7958333, 108.1458333, 110.0291667],
                                        river_lats = [-7.679166667, -7.979166667, -7.670833333, -7.779166667, -7.895833333],
                                        river_styles=['-', '-.', ':', '--', '-'],
                                        river_colors=['k', 'k', 'k', 'k', '#bfbfbf']):
-    particles = BeachingParticles.read_from_netcdf(get_dir('iot_input'))
+    particles = BeachingParticles.read_from_netcdf(input_path)
     cki_n_release, _, cki_n_entry = get_n_particles_per_month_release_arrival(particles, 'cki')
     ci_n_release, _, ci_n_entry = get_n_particles_per_month_release_arrival(particles, 'christmas')
     all_sources = RiverSources.read_from_shapefile()
@@ -369,7 +371,7 @@ def figure3_release_arrival_histograms(output_path=None, plot_style='plot_tools/
     ax1.set_ylim(0, 3000)
     ax1.set_ylabel('[# particles]')
     ax1.legend(loc='upper right', bbox_to_anchor=(1.18, 1.0))
-    anchored_text1 = AnchoredText(f'(a) Seasonal input of plastic waste from 5 main polluting rivers', loc='upper left', borderpad=0.0)
+    anchored_text1 = AnchoredText(f'(a) Seasonal input of plastic waste from {int(len(river_names))} main polluting rivers', loc='upper left', borderpad=0.0)
     ax1.add_artist(anchored_text1)
 
     ax2 = plt.subplot(2, 2, 3)
@@ -391,8 +393,9 @@ def figure3_release_arrival_histograms(output_path=None, plot_style='plot_tools/
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-def figure4_seasonal_density(output_path=None, plot_style='plot_tools/plot.mplstyle'):
-    input_path = get_dir('iot_input_density')
+def figure4_seasonal_density(input_path=get_dir('iot_input_density'),
+                             output_path=None,
+                             plot_style='plot_tools/plot.mplstyle'):
     lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
     lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
     plt.style.use(plot_style)
@@ -578,5 +581,17 @@ if __name__ == '__main__':
     figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
     figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
-    plastic_measurements(plastic_type='count', output_path=get_dir('iot_plots')+'samples_count.jpg')
-    plastic_measurements(plastic_type='mass', output_path=get_dir('iot_plots')+'samples_mass.jpg')
+    # plastic_measurements(plastic_type='count', output_path=get_dir('iot_plots')+'samples_count.jpg')
+    # plastic_measurements(plastic_type='mass', output_path=get_dir('iot_plots')+'samples_mass.jpg')
+    
+    # --- plots with 3% wind added ---
+    # river_names_cki_wind = ['Tanduy', 'Bogowonto']
+    # river_names_ci_wind = ['Bogowonto', 'Progo', 'Tanduy']
+    # figure2_main_sources(river_names_cki=river_names_cki_wind, river_names_ci=river_names_ci_wind,
+    #                      input_path=get_dir('iot_input_wind'), output_path=get_dir('iot_plots')+'fig2_wind.jpg')
+    # river_names_wind = ['Progo', 'Tanduy', 'Bogowonto']
+    # river_lons_wind = [110.2125, 108.7958333, 110.0291667]
+    # river_lats_wind = [-7.979166667, -7.670833333, -7.895833333]
+    # figure3_release_arrival_histograms(river_names=river_names_wind, river_lons=river_lons_wind, river_lats=river_lats_wind,
+    #                                    input_path=get_dir('iot_input_wind'), output_path=get_dir('iot_plots')+'fig3_wind.jpg')
+    #figure4_seasonal_density(input_path=get_dir('iot_input_density_wind'), output_path=get_dir('iot_plots')+'fig4_wind.jpg')
