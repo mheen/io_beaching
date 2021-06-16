@@ -30,7 +30,7 @@ def get_christmas_box_lon_lat_range():
     return (lon_range, lat_range)
 
 def get_christmas_plastic_measurements(input_path=get_dir('iot_measurements')):
-    time, lon, lat, n_plastic, kg_plastic = get_iot_plastic_measurements()
+    time, lon, lat, n_plastic, kg_plastic = get_iot_plastic_measurements(input_path=input_path)
     lon_range, lat_range = get_christmas_box_lon_lat_range()
     l_lon = np.logical_and(lon_range[0]<=lon, lon<=lon_range[1])
     l_lat = np.logical_and(lat_range[0]<=lat, lat<=lat_range[1])
@@ -38,7 +38,7 @@ def get_christmas_plastic_measurements(input_path=get_dir('iot_measurements')):
     return time[l_ci], lon[l_ci], lat[l_ci], n_plastic[l_ci], kg_plastic[l_ci]
 
 def get_cki_plastic_measurements(input_path=get_dir('iot_measurements')):
-    time, lon, lat, n_plastic, kg_plastic = get_iot_plastic_measurements()
+    time, lon, lat, n_plastic, kg_plastic = get_iot_plastic_measurements(input_path=input_path)
     lon_range, lat_range = get_cki_box_lon_lat_range()
     l_lon = np.logical_and(lon_range[0]<=lon, lon<=lon_range[1])
     l_lat = np.logical_and(lat_range[0]<=lat, lat<=lat_range[1])
