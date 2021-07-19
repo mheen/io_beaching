@@ -175,6 +175,86 @@ def _histogram_release_arrival(ax, n_release, n_entry, ylim=[0, 500]):
     ax.set_ylabel('[# of particles]')
     ax.set_ylim(ylim)
 
+def _get_plastic_samples(plastic_type='count') -> tuple:
+    if not np.logical_or(plastic_type=='count', plastic_type=='mass'):
+        raise ValueError(f'Unknown plastic type requested: {plastic_type}. Valid values are: count and mass.')
+
+    months = np.arange(1,13,1)
+    # plastic measurements
+    time_cki, _, _, n_plastic_cki, kg_plastic_cki = get_cki_plastic_measurements()
+    time_ci, _, _, n_plastic_ci, kg_plastic_ci = get_christmas_plastic_measurements()
+    n_plastic_month_cki = np.zeros(12)
+    n_months_cki = np.zeros(12)
+    n_plastic_month_ci = np.zeros(12)
+    n_months_ci = np.zeros(12)
+    # cki
+    for i, t in enumerate(time_cki):
+        n_months_cki[t.month-1] += 1
+        if plastic_type == 'count':
+            n_plastic_month_cki[t.month-1] = np.nansum([n_plastic_month_cki[t.month-1], n_plastic_cki[i]])
+        elif plastic_type == 'mass':
+            n_plastic_month_cki[t.month-1] = np.nansum([n_plastic_month_cki[t.month-1], kg_plastic_cki[i]])
+    # ci
+    for i, t in enumerate(time_ci):
+        n_months_ci[t.month-1] += 1
+        if plastic_type == 'count':
+            n_plastic_month_ci[t.month-1] = np.nansum([n_plastic_month_ci[t.month-1], n_plastic_ci[i]])
+        elif plastic_type == 'mass':
+            n_plastic_month_ci[t.month-1] = np.nansum([n_plastic_month_ci[t.month-1], kg_plastic_ci[i]])
+    
+    return (months, n_plastic_month_cki, n_plastic_month_ci, n_months_cki, n_months_ci)
+
+def _histogram_samples(ax, months, n_plastic, n_months, plastic_type='count', show_legend=True,
+                       yticks_left=True, yticks_right=True) -> plt.axes:
+    colors = get_months_colors()
+    color = '#adadad'
+
+    if plastic_type == 'count':
+        ylabel = 'Plastic items [#/month]'
+        ylim = [0, 140000]
+        yticks = np.arange(0, 140000, 20000)
+        ylim_studies = [0, 14]
+        yticks_studies = np.arange(0, 14, 2)
+    elif plastic_type == 'mass':
+        ylabel = 'Plastic weight [kg/month]'
+        ylim = [0, 4000]
+        yticks = np.arange(0, 4000, 500)
+        ylim_studies = [0, 16]
+        yticks_studies = np.arange(0, 16, 2)
+    else:
+        raise ValueError(f'Unknown plastic type requested: {plastic_type}. Valid values are: count and mass.')
+    
+    # number of plastic items
+    ax.bar(months-0.2, n_plastic, width=0.4, color=colors, edgecolor='k', zorder=5)
+    ax.set_xticks(months)
+    ax.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
+    ax.set_ylim(ylim)
+    ax.set_yticks(yticks)
+    if yticks_left == False:
+        ax.set_yticklabels([])
+    else:
+        ax.set_ylabel(ylabel)
+    # number of sampling studies per month
+    ax2 = ax.twinx()
+    ax2.grid(False)
+    ax2.bar(months+0.2, n_months, width=0.4, color=color, edgecolor='k', zorder=6)
+    ax2.set_ylim(ylim_studies)
+    ax2.set_yticks(yticks_studies)
+    if yticks_right == False:
+        ax2.set_yticklabels([])
+    else:
+        ax2.set_ylabel('Beach clean-ups [#/month]')
+    ax2.spines['right'].set_color(color)
+    ax2.tick_params(axis='y', colors=color)
+    ax2.yaxis.label.set_color(color)
+
+    # legend
+    if show_legend:
+        legend_elements = [Patch(facecolor=colors[3], edgecolor='k', label='Plastic items'),
+                        Patch(facecolor=color, edgecolor='k', label='Beach clean-ups')]
+        ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.08, 1.0))
+    return ax
+
 def figure1_overview(output_path=None,
                      river_dir = get_dir('indonesia_rivers'),
                      river_filenames=['progo.shp', 'bogowonto.shp', 'serayu.shp', 'tanduy.shp', 'wulan.shp'],
@@ -346,7 +426,8 @@ def figure3_release_arrival_histograms(input_path=get_dir('iot_input'),
                                        river_lons = [109.1125, 110.2125, 108.7958333, 108.1458333, 110.0291667],
                                        river_lats = [-7.679166667, -7.979166667, -7.670833333, -7.779166667, -7.895833333],
                                        river_styles=['-', '-.', ':', '--', '-'],
-                                       river_colors=['k', 'k', 'k', 'k', '#bfbfbf']):
+                                       river_colors=['k', 'k', 'k', 'k', '#bfbfbf'],
+                                       show=True):
     particles = BeachingParticles.read_from_netcdf(input_path)
     cki_n_release, _, cki_n_entry = get_n_particles_per_month_release_arrival(particles, 'cki')
     ci_n_release, _, ci_n_entry = get_n_particles_per_month_release_arrival(particles, 'christmas')
@@ -355,13 +436,18 @@ def figure3_release_arrival_histograms(input_path=get_dir('iot_input'),
     for i in range(len(river_names)):
         i_river = np.where(np.logical_and(all_sources.lon==river_lons[i], all_sources.lat==river_lats[i]))
         river_waste.append(np.squeeze(all_sources.waste[i_river]))
-        
+    # plastic samples
+    (months, n_plastic_cki, n_plastic_ci, n_months_cki, n_months_ci) = _get_plastic_samples()
+
+    colors = get_months_colors()
+
     plt.style.use(plot_style)
-    fig = plt.figure(figsize=(5,4))
+    fig = plt.figure(figsize=(5, 6))
     plt.rcParams['font.size'] = 5
     plt.rcParams['axes.labelsize'] = 5
 
-    ax1 = plt.subplot(2, 2, (1, 2))
+    # (a) seasonal waste input
+    ax1 = plt.subplot(3, 2, (1, 2))
     for i in range(len(river_names)):
         ax1.plot(all_sources.time, river_waste[i], label=river_names[i], color=river_colors[i], linestyle=river_styles[i])
     ax1.set_xticks(all_sources.time)
@@ -374,21 +460,37 @@ def figure3_release_arrival_histograms(input_path=get_dir('iot_input'),
     anchored_text1 = AnchoredText(f'(a) Seasonal input of plastic waste from {int(len(river_names))} main polluting rivers', loc='upper left', borderpad=0.0)
     ax1.add_artist(anchored_text1)
 
-    ax2 = plt.subplot(2, 2, 3)
+    # (b) seasonal particles arriving CKI
+    ax2 = plt.subplot(3, 2, 3)
     _histogram_release_arrival(ax2, cki_n_release, cki_n_entry)
-    anchored_text2 = AnchoredText(f'(b) Seasonality of particles reaching Cocos Keeling Islands', loc='upper left', borderpad=0.0)
+    anchored_text2 = AnchoredText(f'(b) Particles reaching Cocos Keeling Islands (CKI) per month', loc='upper left', borderpad=0.0)
     ax2.add_artist(anchored_text2)
-    # legend
-    legend_elements = [Patch(facecolor='w', edgecolor='k', hatch='//////', label='Release'),
-                       Patch(facecolor='w', edgecolor='k', label='Arrival')]
-    ax2.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(0.0, 0.91))
 
-    ax3 = plt.subplot(2, 2, 4)
+    # seasonal particles arriving CI
+    ax3 = plt.subplot(3, 2, 4)
     _histogram_release_arrival(ax3, ci_n_release, ci_n_entry)
-    ax3.yaxis.set_label_position('right')
-    ax3.yaxis.tick_right()
-    anchored_text3 = AnchoredText(f'(c) Seasonality of particles reaching Christmas Island', loc='upper left', borderpad=0.0)
+    ax3.set_yticklabels([])
+    ax3.set_ylabel('')
+    anchored_text3 = AnchoredText(f'(c) Particles reaching Christmas Island (CI) per month', loc='upper left', borderpad=0.0)
     ax3.add_artist(anchored_text3)
+    # legend
+    legend_elements = [Patch(facecolor=colors[3], edgecolor='k', hatch='//////', label='Release'),
+                       Patch(facecolor=colors[3], edgecolor='k', label='Arrival')]
+    ax3.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.08, 1.0))
+
+    # (d) seasonal measured plastic CKI
+    ax4 = plt.subplot(3, 2, 5)
+    ax4 = _histogram_samples(ax4, months, n_plastic_cki, n_months_cki, yticks_right=False, show_legend=False)
+    anchored_text4 = AnchoredText('(d) Plastic collected on CKI beaches per month',
+                                  loc='upper left', borderpad=0.0)
+    ax4.add_artist(anchored_text4)
+    
+    # (b) seasonal distribution measured plastic CI
+    ax5 = plt.subplot(3, 2, 6)
+    ax5 = _histogram_samples(ax5, months, n_plastic_ci, n_months_ci, yticks_left=False)
+    anchored_text5 = AnchoredText(f'(e) Plastic collected on CI beaches per month', loc='upper left', borderpad=0.0)
+    ax5.add_artist(anchored_text5)
+
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
@@ -575,12 +677,12 @@ def hycom_velocities(input_path, thin=6, scale=10,
     plt.show()
 
 if __name__ == '__main__':
-    figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
-    river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
-    river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
-    figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
+    # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
+    # river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
+    # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
+    # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
-    figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+    # figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
     # plastic_measurements(plastic_type='count', output_path=get_dir('iot_plots')+'samples_count.jpg')
     # plastic_measurements(plastic_type='mass', output_path=get_dir('iot_plots')+'samples_mass.jpg')
     
