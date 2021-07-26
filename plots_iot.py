@@ -25,9 +25,9 @@ def get_months_colors():
 
 def _add_horizontal_colorbar(fig,ax,c,ranges,scale_width=1,
                              ticklabels=['1','10','10$^2$','10$^3$','10$^4$'],
-                             cbarlabel = 'Particle density [# per grid cell]'):
+                             cbarlabel = 'Mean particle density [# per grid cell]'):
     l,b,w,h = ax.get_position().bounds
-    cbax = fig.add_axes([l,b-0.1,scale_width*w,0.02])
+    cbax = fig.add_axes([l,b-0.07,scale_width*w,0.02])
     cbar = plt.colorbar(c,ticks=ranges,orientation='horizontal',cax=cbax)
     cbar.ax.set_xticklabels(ticklabels)
     cbar.set_label(cbarlabel)
@@ -172,7 +172,7 @@ def _histogram_release_arrival(ax, n_release, n_entry, ylim=[0, 500]):
                 width=0.4, color=colors[i], edgecolor='k', zorder=5)
     ax.set_xticks(months)
     ax.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
-    ax.set_ylabel('[# of particles]')
+    ax.set_ylabel('Particles [#/month]')
     ax.set_ylim(ylim)
 
 def _get_plastic_samples(plastic_type='count') -> tuple:
@@ -455,7 +455,7 @@ def figure3_release_arrival_histograms(input_path=get_dir('iot_input'),
     ax1.set_xlim(1, 12)
     ax1.set_yticks(np.arange(0, 3000, 500))
     ax1.set_ylim(0, 3000)
-    ax1.set_ylabel('[# particles]')
+    ax1.set_ylabel('Released particles [#/month]')
     ax1.legend(loc='upper right', bbox_to_anchor=(1.18, 1.0))
     anchored_text1 = AnchoredText(f'(a) Seasonal input of plastic waste from {int(len(river_names))} main polluting rivers', loc='upper left', borderpad=0.0)
     ax1.add_artist(anchored_text1)
@@ -496,43 +496,42 @@ def figure3_release_arrival_histograms(input_path=get_dir('iot_input'),
     plt.show()
 
 def figure4_seasonal_density(input_path=get_dir('iot_input_density'),
+                             input_dir_hycom_means=get_dir('hycom_means'),
                              output_path=None,
                              plot_style='plot_tools/plot.mplstyle'):
     lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
     lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
     plt.style.use(plot_style)
-    fig = plt.figure(figsize=(6,6))
-    for i in range(12):
-        start_date = datetime(2008, i+1, 1)
+    fig = plt.figure(figsize=(5, 6))
+    months = np.arange(3, 8, 1)
+    n_rows = 3
+    n_cols = 2
+    for i, month in enumerate(months):
+        start_date = datetime(2008, month, 1)
         end_date = add_month_to_timestamp(start_date, 1)
         density = Density.read_from_netcdf(input_path, time_start=start_date, time_end=end_date)
         z = np.mean(density.density, axis=0)
         z[z==0] = np.nan
         lon = density.grid.lon
         lat = density.grid.lat
-        ax = plt.subplot(4, 3, i+1, projection=ccrs.PlateCarree())
-        if i in [0, 3, 6]:
-            mplot = _iot_basic_map(ax, xmarkers='off')
-            ax.tick_params(axis='both', which='both', length=0)
-            ax.set_xticklabels([])
-        elif i in [10, 11]:
-            mplot = _iot_basic_map(ax, ymarkers='off')
-            ax.tick_params(axis='both', which='both', length=0)
+        input_path_hycom = f'{input_dir_hycom_means}iot_{start_date.strftime("%b")}.nc'
+        lon_hycom, lat_hycom, u_hycom, v_hycom = read_mean_hycom_data(input_path_hycom)
+
+        ax = plt.subplot(n_rows, n_cols, i+1, projection=ccrs.PlateCarree())
+        mplot = _iot_basic_map(ax)
+        ax.tick_params(axis='both', which='both', length=0)
+        if np.remainder(i+1, n_cols) != 1: # not first column
             ax.set_yticklabels([])
-        elif i == 9:
-            mplot = _iot_basic_map(ax)
-            ax.tick_params(axis='both', which='both', length=0)
-        else:
-            mplot = _iot_basic_map(ax, xmarkers='off', ymarkers='off')
-            ax.tick_params(axis='both', which='both', length=0)
+        if i+1 <= n_rows*n_cols-n_cols-(n_rows*n_cols-len(months)): # not last row
             ax.set_xticklabels([])
-            ax.set_yticklabels([])
         c, ranges = mplot.pcolormesh(lon, lat, z, ranges=[1,10,100,10**3,10**4], show_cbar=False)
-        mplot.box(lon_range_cki, lat_range_cki, linewidth=0.5)
-        mplot.box(lon_range_ci, lat_range_ci, linewidth=0.5)
-        if i == 9:
-            _add_horizontal_colorbar(fig, ax, c, ranges, scale_width=3.3)
-        mplot.add_subtitle(f'({string.ascii_lowercase[i]}) {start_date.strftime("%b")}')
+        q = mplot.quiver(lon_hycom, lat_hycom, u_hycom, v_hycom, thin=12, scale=8)
+        mplot.box(lon_range_cki, lat_range_cki, linewidth=1.0, color='#747474')
+        mplot.box(lon_range_ci, lat_range_ci, linewidth=1.0, color='#747474')
+        if i+1 == len(months):
+            _add_horizontal_colorbar(fig, ax, c, ranges, scale_width=2.2)
+            ax.quiverkey(q, X=1.3, Y=1.0, U=1, label='Mean surface currents [1 m/s]', labelpos='E')
+        mplot.add_subtitle(f'({string.ascii_lowercase[i]}) {start_date.strftime("%B")}')
     # save
     if output_path:
         plt.savefig(output_path,bbox_inches='tight',dpi=300)
@@ -681,8 +680,8 @@ if __name__ == '__main__':
     # river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
     # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
     # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
-    figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
-    # figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+    # figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
+    figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
     # plastic_measurements(plastic_type='count', output_path=get_dir('iot_plots')+'samples_count.jpg')
     # plastic_measurements(plastic_type='mass', output_path=get_dir('iot_plots')+'samples_mass.jpg')
     

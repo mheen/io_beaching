@@ -122,7 +122,8 @@ class MapPlot:
             v = v[i][:,j]
             lon = lon[j]
             lat = lat[i]
-        self.ax.quiver(lon, lat, u, v, scale=scale, transform=ccrs.PlateCarree(), zorder=3)
+        q = self.ax.quiver(lon, lat, u, v, scale=scale, transform=ccrs.PlateCarree(), zorder=3)
+        return q
 
     def contourf(self,lon,lat,z,levels=None,cmap='Reds'):
         xx,yy = np.meshgrid(lon,lat)
