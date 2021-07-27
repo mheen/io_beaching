@@ -682,8 +682,6 @@ if __name__ == '__main__':
     # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     # figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
     figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
-    # plastic_measurements(plastic_type='count', output_path=get_dir('iot_plots')+'samples_count.jpg')
-    # plastic_measurements(plastic_type='mass', output_path=get_dir('iot_plots')+'samples_mass.jpg')
     
     # --- plots with 3% wind added ---
     # river_names_cki_wind = ['Tanduy', 'Bogowonto']
@@ -695,4 +693,4 @@ if __name__ == '__main__':
     # river_lats_wind = [-7.979166667, -7.670833333, -7.895833333]
     # figure3_release_arrival_histograms(river_names=river_names_wind, river_lons=river_lons_wind, river_lats=river_lats_wind,
     #                                    input_path=get_dir('iot_input_wind'), output_path=get_dir('iot_plots')+'fig3_wind.jpg')
-    #figure4_seasonal_density(input_path=get_dir('iot_input_density_wind'), output_path=get_dir('iot_plots')+'fig4_wind.jpg')
+    # figure4_seasonal_density(input_path=get_dir('iot_input_density_wind'), output_path=get_dir('iot_plots')+'fig4_wind.jpg')
