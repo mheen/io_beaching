@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 from netCDF4 import Dataset
 import os
+import wget
+import log
 
 gshhg_distance_url = 'ftp://ftp.soest.hawaii.edu/gshhg/dist_to_GSHHG_v2.3.7_1m.nc'
 
@@ -43,6 +45,7 @@ class CoastDistance:
     @staticmethod
     def read_from_netcdf(input_path='input/dist_to_GSHHG_v2.3.7_1m.nc'):
         if not os.path.exists(input_path):
+            log.info(None, f'Downloading GSHHG distance to coast file, this may take a few minutes.')
             wget.download(gshhg_distance_url,out=input_path)
         data = Dataset(input_path)
         lat = data['lat'][:].filled(fill_value=np.nan)

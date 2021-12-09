@@ -150,7 +150,7 @@ def process_beached_particles(particles,dx,p,basin_name='io_nh',output_descripti
     _write_to_netcdf(beached_particles,output_path)
     return beached_particles
 
-def process_particles(input_description='io_river_sources',
+def process_particles(input_description='io_river_sources_',
                       basin_name='io_nh',
                       years=np.arange(1995,2016,1),
                       output_description=None):
@@ -190,7 +190,7 @@ def process_specific_file_particles_in_lon_lat_range(input_path, output_path, lo
         _write_to_netcdf(particles, output_path)
 
 if __name__ == '__main__':
-    basin_names = ['io_nh','io_sh']
+    basin_names = ['io_nh','io_sh', 'io']
     dx,_ = get_defaults()
     ps = get_probabilities()
     for basin_name in basin_names:

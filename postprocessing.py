@@ -271,13 +271,10 @@ def postprocess_beached(dx,p,basin_name='io_nh',extra_description=None):
     io_dev.write_to_netcdf(output_io_dev)
 
 if __name__ == '__main__':
-    basin_names = ['io_nh','io_sh']
+    basin_names = ['io_nh','io_sh', 'io']
     dx,p_default = get_defaults()
     ps = get_probabilities()
     ps.remove(p_default)
-    ps_sh = np.copy(ps)
-    ps_sh.remove(0.275)
-    ps_sh.remove(0.725)
     for basin_name in basin_names:
         postprocess_beached(dx,p_default,basin_name=basin_name)        
         for p in ps:

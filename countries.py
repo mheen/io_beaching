@@ -6,6 +6,7 @@ from shapely.geometry.polygon import Polygon
 import numpy as np
 from netCDF4 import Dataset
 from plot_tools.map_plotter import MapPlot
+import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import log
 
@@ -127,7 +128,7 @@ class CountriesGridded:
     def plot(self,p_lon=None,p_lat=None):
         ax = plt.gca(projection=ccrs.PlateCarree())
         mplot = MapPlot(ax,None,None)
-        mplot.pcolormesh(lon,lat,self.countries,ranges=None,show_cbar=False)        
+        mplot.pcolormesh(self.grid.lon,self.grid.lat,self.countries,ranges=None,show_cbar=False)        
         if p_lon is not None:
             mplot.points(p_lon,p_lat)
         # add country names
