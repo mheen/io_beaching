@@ -7,6 +7,7 @@ from postprocessing_iot import get_l_particles_in_box, get_cki_box_lon_lat_range
 from postprocessing_iot import get_iot_lon_lat_range, get_iot_sources, get_main_sources_lon_lat_n_particles
 from postprocessing_iot import get_original_source_based_on_lon0_lat0, get_n_particles_per_month_release_arrival
 from postprocessing_iot import get_cki_plastic_measurements, get_christmas_plastic_measurements, get_cki_box_lon_lat_range, get_christmas_box_lon_lat_range
+from geojson import Feature, FeatureCollection, LineString, dump
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from matplotlib.lines import Line2D
@@ -17,6 +18,7 @@ import cartopy.io.shapereader as shpreader
 import numpy as np
 from datetime import datetime
 import string
+import time
 
 def get_months_colors():
     colors = ['#ffedbc', '#fece6b', '#fdc374', '#fb9d59', '#f57547', '#d00d20',
@@ -675,13 +677,39 @@ def hycom_velocities(input_path, thin=6, scale=10,
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
 
+def get_kepler_geojson(output_path, input_path=get_dir('iot_input_2008_only')):
+    particles = BeachingParticles.read_from_netcdf(input_path)
+    l_box_cki = get_l_particles_in_box(particles, 'cki')
+    l_box_ci = get_l_particles_in_box(particles, 'christmas')
+    l_box_iot = np.logical_or(l_box_cki, l_box_ci)
+    lon = particles.lon[l_box_iot, :]
+    lat = particles.lat[l_box_iot, :]
+    pid = particles.pid[l_box_iot]
+    
+    features = []
+    for p in range(len(pid)):
+        coordinates = []
+        for t in range(len(particles.time)):
+            unixtime = int(time.mktime(particles.time[t].timetuple()))
+            if np.isnan(lon[p, t]) or np.isnan(lat[p, t]):
+                continue
+            coordinates.append((lon[p, t], lat[p, t], 0, unixtime))
+        linestring = LineString(coordinates)
+        features.append(Feature(geometry=linestring, properties={"pid":str(p)}))
+    feature_collection = FeatureCollection(features)
+    
+    with open(output_path, 'w') as f:
+        dump(feature_collection, f)
+
 if __name__ == '__main__':
     # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
     # river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
     # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
     # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     # figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
-    figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+    # figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+    output_path = f'{get_dir("animation_output")}iot.geojson'
+    get_kepler_geojson(output_path)
     
     # --- plots with 3% wind added ---
     # river_names_cki_wind = ['Tanduy', 'Bogowonto']
