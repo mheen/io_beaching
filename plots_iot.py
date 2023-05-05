@@ -259,7 +259,7 @@ def _histogram_samples(ax, months, n_plastic, n_months, plastic_type='count', sh
         raise ValueError(f'Unknown plastic type requested: {plastic_type}. Valid values are: count and mass.')
     
     # number of plastic items
-    ax.bar(months-0.2, n_plastic, width=0.4, color=colors, edgecolor='k', zorder=5)
+    ax.bar(months-0.2, n_plastic, width=0.4, color=colors[4], edgecolor='k', zorder=5)
     ax.set_xticks(months)
     ax.set_xticklabels(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
     ax.set_ylim(ylim)
@@ -522,35 +522,35 @@ def figure3_release_arrival_histograms(input_path=get_dir('iot_input'),
     anchored_text1 = AnchoredText(f'(a) Seasonal input of plastic waste from {int(len(river_names))} main polluting rivers', loc='upper left', borderpad=0.0)
     ax1.add_artist(anchored_text1)
 
-    # (b) seasonal particles arriving CKI
-    ax2 = plt.subplot(3, 2, 3)
+    # (c) seasonal particles arriving CKI
+    ax2 = plt.subplot(3, 2, 4)
     _histogram_release_arrival(ax2, cki_n_release, cki_n_entry)
-    anchored_text2 = AnchoredText(f'(b) Particles reaching Cocos Keeling Islands (CKI) per month', loc='upper left', borderpad=0.0)
+    ax2.set_yticklabels([])
+    ax2.set_ylabel('')
+    anchored_text2 = AnchoredText(f'(c) Particles reaching Cocos Keeling Islands (CKI) per month', loc='upper left', borderpad=0.0)
     ax2.add_artist(anchored_text2)
-
-    # seasonal particles arriving CI
-    ax3 = plt.subplot(3, 2, 4)
-    _histogram_release_arrival(ax3, ci_n_release, ci_n_entry)
-    ax3.set_yticklabels([])
-    ax3.set_ylabel('')
-    anchored_text3 = AnchoredText(f'(c) Particles reaching Christmas Island (CI) per month', loc='upper left', borderpad=0.0)
-    ax3.add_artist(anchored_text3)
     # legend
     legend_elements = [Patch(facecolor=colors[3], edgecolor='k', hatch='//////', label='Release'),
                        Patch(facecolor=colors[3], edgecolor='k', label='Arrival')]
-    ax3.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.08, 1.0))
+    ax2.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.08, 1.0))
 
-    # (d) seasonal measured plastic CKI
-    ax4 = plt.subplot(3, 2, 5)
-    ax4 = _histogram_samples(ax4, months, n_plastic_cki, n_months_cki, yticks_right=False, show_legend=False)
-    anchored_text4 = AnchoredText('(d) Plastic collected on CKI beaches per month',
+    # (b) seasonal particles arriving CI
+    ax3 = plt.subplot(3, 2, 3)
+    _histogram_release_arrival(ax3, ci_n_release, ci_n_entry)
+    anchored_text3 = AnchoredText(f'(b) Particles reaching Christmas Island (CI) per month', loc='upper left', borderpad=0.0)
+    ax3.add_artist(anchored_text3)
+    
+    # (e) seasonal measured plastic CKI
+    ax4 = plt.subplot(3, 2, 6)
+    ax4 = _histogram_samples(ax4, months, n_plastic_cki, n_months_cki, yticks_left=False)
+    anchored_text4 = AnchoredText('(e) Plastic collected on CKI beaches per month',
                                   loc='upper left', borderpad=0.0)
     ax4.add_artist(anchored_text4)
     
-    # (b) seasonal distribution measured plastic CI
-    ax5 = plt.subplot(3, 2, 6)
-    ax5 = _histogram_samples(ax5, months, n_plastic_ci, n_months_ci, yticks_left=False)
-    anchored_text5 = AnchoredText(f'(e) Plastic collected on CI beaches per month', loc='upper left', borderpad=0.0)
+    # (d) seasonal distribution measured plastic CI
+    ax5 = plt.subplot(3, 2, 5)
+    ax5 = _histogram_samples(ax5, months, n_plastic_ci, n_months_ci, yticks_right=False, show_legend=False)
+    anchored_text5 = AnchoredText(f'(d) Plastic collected on CI beaches per month', loc='upper left', borderpad=0.0)
     ax5.add_artist(anchored_text5)
 
     if output_path:
@@ -763,11 +763,15 @@ def get_kepler_geojson(output_path, input_path=get_dir('iot_input_2008_only')):
 
 if __name__ == '__main__':
     # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
-    river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
-    river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
-    figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
-    # figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
+    
+    # river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
+    # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
+    # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
+    
+    figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
+    
     # figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+    
     # output_path = f'{get_dir("animation_output")}iot.geojson'
     # get_kepler_geojson(output_path)
     
