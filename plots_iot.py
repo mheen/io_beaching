@@ -416,25 +416,24 @@ def figure2_main_sources(input_path=get_dir('iot_input'),
     fig = plt.figure(figsize=(6, 4))
     plt.rcParams['font.size'] = 5
     plt.rcParams['axes.labelsize'] = 5
-    plt.subplots_adjust(wspace=0.0)
+    plt.subplots_adjust(wspace=0.2)
     plt.subplots_adjust(hspace=0.35)
     land_color = '#cfcfcf'
     in_box_color = '#2e4999'
-    # (a) main sources CKI
-    ax1 = plt.subplot(2, 3, (1, 2), projection=ccrs.PlateCarree())
+    # (c) main sources CKI
+    ax1 = plt.subplot(2, 3, (4, 5), projection=ccrs.PlateCarree())
     mplot1 = _iot_basic_map(ax1)
     plt.rcParams['font.size'] = 5
-    mplot1.ax.set_xticklabels([])
     mplot1.tracks(particles.lon[l_box_cki, :], particles.lat[l_box_cki, :], color=in_box_color, linewidth=0.2)
     mplot1.box(box_lon_cki, box_lat_cki, linewidth=0.8, color='w')
     mplot1.box(box_lon_cki, box_lat_cki, linewidth=0.5)
     ax1.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
     mplot1.points(lon_main_cki, lat_main_cki, marker='o', facecolor=main_colors_cki,
                  markersize=np.array(main_sizes_cki)*5, edgewidth=main_edgewidths_cki)
-    mplot1.add_subtitle(f'(a) Source locations and tracks of particles reaching\n     Cocos Keeling Islands (CKI)')
-    ax1.set_anchor('W')
-    # (c) main sources CI
-    ax2 = plt.subplot(2, 3, (4, 5), projection=ccrs.PlateCarree())
+    mplot1.add_subtitle(f'(c) Source locations and tracks of particles reaching\n     Cocos Keeling Islands (CKI)')
+    ax1.set_anchor('E')
+    # (a) main sources CI
+    ax2 = plt.subplot(2, 3, (1, 2), projection=ccrs.PlateCarree())
     mplot2 = _iot_basic_map(ax2)
     plt.rcParams['font.size'] = 5
     mplot2.tracks(particles.lon[l_box_ci, :], particles.lat[l_box_ci, :], color=in_box_color, linewidth=0.2)
@@ -443,16 +442,16 @@ def figure2_main_sources(input_path=get_dir('iot_input'),
     ax2.add_feature(cftr.LAND,facecolor=land_color,edgecolor='k',zorder=5)
     mplot2.points(lon_main_ci, lat_main_ci, marker='o', facecolor=main_colors_ci,
                  markersize=np.array(main_sizes_ci)*5, edgewidth=main_edgewidths_ci)
-    mplot2.add_subtitle(f'(c) Source locations and tracks of particles reaching\n     Christmas Island (CI)')
+    mplot2.add_subtitle(f'(a) Source locations and tracks of particles reaching\n     Christmas Island (CI)')
     # sources legend
     legend_entries = _get_legend_entries_for_main_sources()
-    ax2.set_anchor('W')
+    ax2.set_anchor('E')
     ax2.legend(handles=legend_entries, title='[# particles]', loc='upper right',
-                bbox_to_anchor=(1.3, 1.0))
-    # (b) river contributions CKI
-    ax3 = plt.subplot(2, 3, 3)
+                bbox_to_anchor=(-0.1, 1.0))
+    # (d) river contributions CKI
+    ax3 = plt.subplot(2, 3, 6)
     ax3.bar(x_cki, waste_big_cki, color=colors_big_cki, zorder=5)
-    ax3.set_ylabel('[% particles arriving]')
+    ax3.set_ylabel('[% particles arriving]', fontsize=5)
     ax3.set_ylim(ylim_cki)
     yticks = np.arange(0, ylim_cki[1], 5)
     yticks[0] = ylim_cki[0]
@@ -461,22 +460,22 @@ def figure2_main_sources(input_path=get_dir('iot_input'),
     ax3.set_xticks(xticks)
     ax3.set_xticklabels(river_names_cki, rotation='vertical')
     ax3.grid(False, axis='x')
-    anchored_text1 = AnchoredText(f'(b) Contributions of rivers to particles\n     reaching the CKI', loc='upper left', borderpad=0.0)
+    anchored_text1 = AnchoredText(f'(d) Contributions of rivers to particles\n     reaching the CKI', loc='upper left', borderpad=0.0)
     ax3.add_artist(anchored_text1)
     ax3.set_anchor('W')
-    # (d) river contributions CI
-    ax4 = plt.subplot(2, 3, 6)
+    # (b) river contributions CI
+    ax4 = plt.subplot(2, 3, 3)
     ax4.bar(x_ci, waste_big_ci, color=colors_big_ci, zorder=5)
     ax4.set_ylim(ylim_ci)
     yticks2 = np.arange(0, ylim_ci[1], 5)
     yticks2[0] = ylim_ci[0]
     ax4.set_yticks(yticks2)
-    ax4.set_ylabel('[% particles arriving]')
+    ax4.set_ylabel('[% particles arriving]', fontsize=5)
     xticks = np.arange(0, len(river_names_ci))
     ax4.set_xticks(xticks)
     ax4.set_xticklabels(river_names_ci, rotation='vertical')
     ax4.grid(False, axis='x')
-    anchored_text2 = AnchoredText(f'(d) Contributions of rivers to particles\n     reaching CI', loc='upper left', borderpad=0.0)
+    anchored_text2 = AnchoredText(f'(b) Contributions of rivers to particles\n     reaching CI', loc='upper left', borderpad=0.0)
     ax4.add_artist(anchored_text2)
     ax4.set_anchor('W')
     if output_path:
@@ -763,10 +762,10 @@ def get_kepler_geojson(output_path, input_path=get_dir('iot_input_2008_only')):
         dump(feature_collection, f)
 
 if __name__ == '__main__':
-    figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
-    # river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
-    # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
-    # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
+    # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
+    river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
+    river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
+    figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     # figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
     # figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
     # output_path = f'{get_dir("animation_output")}iot.geojson'
