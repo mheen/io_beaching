@@ -126,6 +126,38 @@ def _get_legend_entries_samples(plastic_type):
                               markersize=legend_sizes[i],label=labels[i],markeredgewidth=edge_widths[i]))
     return legend_entries
 
+def _source_info():
+    ranges = np.array([350000.,20000.,2000.,200.,20.,2.,0.])
+    labels = ['> 20,000','2,000 - 20,000','200 - 2,000','20 - 200','2 - 20','< 2']
+    colors = get_colormap_reds(len(ranges)-1)[::-1]
+    edge_widths = [0.7,0.7,0.7,0.5,0.5,0.5]
+    sizes = [6,5,4,3,2,1]*6
+    legend_sizes = [6,5,4,3,2,1]
+    return (ranges,labels,colors,edge_widths,sizes,legend_sizes)
+
+def _get_marker_colors_sizes_edgewidths_for_sources(waste_input):
+    (ranges,_,colors,edge_widths,sizes,_) = _source_info()
+    source_colors = []
+    source_sizes = []    
+    source_edge_widths = []
+    for waste in waste_input:
+        l_range = []
+        for i in range(len(colors)):
+            l_range.append(ranges[i] >= waste >= ranges[i+1])
+        i_range = np.where(l_range)[0][0]
+        source_colors.append(colors[i_range])
+        source_sizes.append(sizes[i_range])
+        source_edge_widths.append(edge_widths[i_range])
+    return source_colors,source_sizes,source_edge_widths
+
+def _get_legend_entries_for_sources():
+    (_,labels,colors,edge_widths,_,legend_sizes) = _source_info()
+    legend_entries = []
+    for i in range(len(colors)):
+        legend_entries.append(Line2D([0],[0],marker='o',color='w',markerfacecolor=colors[i],                              
+                              markersize=legend_sizes[i],label=labels[i],markeredgewidth=edge_widths[i]))
+    return legend_entries
+
 def _get_sorted_river_contribution_info(lon_main_sources,
                                         lat_main_sources,
                                         waste_main_sources,
@@ -283,6 +315,7 @@ def figure1_overview(output_path=None,
 
     plt.style.use(plot_style)
     fig = plt.figure(figsize=(8,6))
+    plt.subplots_adjust(hspace=0.05)
     plt.rcParams['font.size'] = 8
     plt.rcParams['axes.labelsize'] = 6
     # (a) Overview NE monsoon
@@ -293,20 +326,48 @@ def figure1_overview(output_path=None,
     mplot1.box(lon_range_cki, lat_range_cki, linewidth=0.5)
     mplot1.box(lon_range_ci, lat_range_ci, linewidth=0.5)
     mplot1.box(lon_range, lat_range, linewidth=1, color='#d00d20')
-    mplot1.add_subtitle('(a) Region overview and main NE monsoon ocean currents')
+    mplot1.add_subtitle('(a) Main NE monsoon (DJF) ocean currents')
     # (b) Overview SW monsoon
-    ax3 = plt.subplot(2, 2, 3, projection=ccrs.PlateCarree())
+    ax3 = plt.subplot(2, 2, 2, projection=ccrs.PlateCarree())
     mplot3 = _iot_basic_map(ax3)
     plt.rcParams['font.size'] = 8
     plt.rcParams['axes.labelsize'] = 6
     mplot3.box(lon_range_cki, lat_range_cki, linewidth=0.5)
     mplot3.box(lon_range_ci, lat_range_ci, linewidth=0.5)
     mplot3.box(lon_range, lat_range, linewidth=1, color='#d00d20')
-    mplot3.add_subtitle('(b) Region overview and main SW monsoon ocean currents')
-    # (c) zoom Java
-    ax2 = plt.subplot(2, 2, (2, 4), projection=ccrs.PlateCarree())
-    mplot2 = MapPlot(ax2, lon_range, lat_range, meridians=meridians, parallels=parallels,
-                     ymarkers='right')
+    mplot3.add_subtitle('(b) Main SW monsoon (JJA) ocean currents')
+    # (c) Indonesian river sources
+    ax4 = plt.subplot(2, 2, 3, projection=ccrs.PlateCarree())
+    mplot4 = _iot_basic_map(ax4)
+    mplot4.box(lon_range_cki, lat_range_cki, linewidth=0.5)
+    mplot4.box(lon_range_ci, lat_range_ci, linewidth=0.5)
+    mplot4.box(lon_range, lat_range, linewidth=1, color='k')
+    plt.rcParams['font.size'] = 8
+    plt.rcParams['axes.labelsize'] = 6
+
+    global_sources = RiverSources.read_from_netcdf()
+    iot_lon_range, iot_lat_range = get_iot_lon_lat_range()
+    io_sources = global_sources.get_riversources_from_ocean_basin('io')
+    iot_sources = io_sources.get_riversources_in_lon_lat_range(iot_lon_range, iot_lat_range)
+    iot_waste = np.sum(iot_sources.waste, axis=1)
+    i_use = np.where(iot_waste >= 1)
+    iot_waste = iot_waste[i_use]
+    lon_sources = iot_sources.lon[i_use]
+    lat_sources = iot_sources.lat[i_use]
+    (iot_colors,
+    iot_sizes,
+    iot_edge_widths) = _get_marker_colors_sizes_edgewidths_for_sources(iot_waste)
+    
+    mplot4.points(lon_sources, lat_sources, marker='o', facecolor=iot_colors,
+                  markersize=np.array(iot_sizes)*6, edgewidth=iot_edge_widths)
+    mplot4.add_subtitle('(c) Indonesian river plastic sources')
+    legend_entries = _get_legend_entries_for_sources()
+    ax4.set_anchor('E')
+    ax4.legend(handles=legend_entries, title='[tonnes year$^{-1}$]', loc='upper right',
+                bbox_to_anchor=(-0.1, 1.0))
+    # (d) zoom Java
+    ax2 = plt.subplot(2, 2, 4, projection=ccrs.PlateCarree())
+    mplot2 = MapPlot(ax2, lon_range, lat_range, meridians=meridians, parallels=parallels)
     plt.rcParams['font.size'] = 8
     plt.rcParams['axes.labelsize'] = 6
     for river_file in river_filenames:
@@ -316,7 +377,7 @@ def figure1_overview(output_path=None,
             ax2.add_geometries([river.geometry], ccrs.PlateCarree(), edgecolor=river_color,
                                facecolor='None', zorder=5, linewidth=linewidth)
     mplot2.points(city_lons, city_lats, marker='o', edgecolor='k', facecolor='#d00d20', markersize=5)
-    mplot2.add_subtitle('(c) Main Javanese rivers contributing to IOT plastic waste')
+    mplot2.add_subtitle('(d) Main Javanese rivers contributing to IOT plastic waste')
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
@@ -702,14 +763,14 @@ def get_kepler_geojson(output_path, input_path=get_dir('iot_input_2008_only')):
         dump(feature_collection, f)
 
 if __name__ == '__main__':
-    # figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
+    figure1_overview(output_path=get_dir('iot_plots')+'fig1.jpg')
     # river_names_cki = ['Serayu', 'Bogowonto', 'Tanduy', 'Progo']
     # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
     # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     # figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
     # figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
-    output_path = f'{get_dir("animation_output")}iot.geojson'
-    get_kepler_geojson(output_path)
+    # output_path = f'{get_dir("animation_output")}iot.geojson'
+    # get_kepler_geojson(output_path)
     
     # --- plots with 3% wind added ---
     # river_names_cki_wind = ['Tanduy', 'Bogowonto']
