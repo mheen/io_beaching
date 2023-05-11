@@ -7,6 +7,7 @@ from postprocessing_iot import get_l_particles_in_box, get_cki_box_lon_lat_range
 from postprocessing_iot import get_iot_lon_lat_range, get_iot_sources, get_main_sources_lon_lat_n_particles
 from postprocessing_iot import get_original_source_based_on_lon0_lat0, get_n_particles_per_month_release_arrival
 from postprocessing_iot import get_cki_plastic_measurements, get_christmas_plastic_measurements, get_cki_box_lon_lat_range, get_christmas_box_lon_lat_range
+from countries import CountriesGridded
 from geojson import Feature, FeatureCollection, LineString, dump
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
@@ -599,6 +600,101 @@ def figure4_seasonal_density(input_path=get_dir('iot_input_density'),
         plt.savefig(output_path,bbox_inches='tight',dpi=300)
     plt.show()
 
+def figure5_other_countries_affected(input_path=get_dir('iot_input'),
+                                     river_lons_pts = [109.08001708984375, 110.27996826171875, 108.67999267578125, 108.1199951171875, 110.1199951171875],
+                                     river_lats_pts = [-7.800000190734863, -8.119999885559082, -7.800000190734863, -7.880000114440918, -8.039999961853027],
+                                     river_lons = [109.1125, 110.2125, 108.7958333, 108.1458333, 110.0291667],
+                                     river_lats = [-7.679166667, -7.979166667, -7.670833333, -7.779166667, -7.895833333],
+                                     river_names = ['Serayu', 'Progo', 'Tanduy', 'Wulan', 'Bogowonto'],
+                                     output_path=None, plot_style='plot_tools/plot.mplstyle',):
+
+    cgrid_org = CountriesGridded.read_from_netcdf()
+    cgrid = cgrid_org.get_countriesgridded_with_halo(halosize=3)
+    cgrid.extend_iot()
+
+    particles = BeachingParticles.read_from_netcdf(input_path)
+    lon0, lat0 = particles.get_initial_particle_lon_lat()
+
+    l_rivers = np.zeros(len(lon0)).astype(bool)
+    for i in range(len(river_lons_pts)):
+        l_rivers = np.logical_or(l_rivers, np.logical_and(lon0==river_lons_pts[i], lat0==river_lats_pts[i]))
+
+    pid = particles.pid[l_rivers]
+    lon = particles.lon[l_rivers, :]
+    lat = particles.lat[l_rivers, :]
+    beached = particles.beached[l_rivers, :]
+    river_particles = BeachingParticles(pid, particles.time, lon, lat, beached, particles.t_interval)
+    
+    i, j = cgrid.grid.get_index(river_particles.lon, river_particles.lat)
+    t_start = 2 # doing this to allow particles to move away from source country in first 2 days
+    countries = np.empty(0)
+    for p in range(len(river_particles.pid)):
+        i_p = i[p, t_start:]
+        j_p = j[p, t_start:]
+        l_nonans = np.logical_and(~np.isnan(i_p), ~np.isnan(j_p))
+        p_countries = cgrid.countries[j_p[l_nonans].astype(int), i_p[l_nonans].astype(int)]
+        countries = np.concatenate([countries, np.unique(p_countries[~np.isnan(p_countries)])]) # only count particle passing by country once
+
+    unique_countries = np.unique(countries)
+    
+    n_particles_per_country = []
+    for c in unique_countries:
+        n_particles_per_country.append(np.sum(countries==c))
+    n_particles_per_country = np.array(n_particles_per_country)
+
+    i_sort = np.argsort(n_particles_per_country)[::-1] # sort descending
+    i_sort = i_sort[n_particles_per_country[i_sort]>10] # ignore less than 10 particles
+
+    plt.style.use(plot_style)
+    plt.rcParams['font.size'] = 5
+    plt.rcParams['axes.labelsize'] = 5
+
+    ranges = [50000, 4000, 2000, 1000, 500, 0]
+    colors = get_colormap_reds(len(ranges)-1)[::-1]
+    bar_colors = []
+    for n in n_particles_per_country[i_sort]:
+        bar_colors.append(colors[np.where(n<ranges)[0][-1]])
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(5, 4))
+    fig.subplots_adjust(hspace=0.05)
+
+    tick_labels0 = cgrid.get_country_name(unique_countries[i_sort])
+    tick_labels1 = [t.replace('France', 'Reunion') for t in tick_labels0]
+    tick_labels2 = [t.replace('British Indian Ocean Territory', 'Chagos Archipelago') for t in tick_labels1]
+    tick_labels = [t.replace('Indian Ocean Territories', 'Christmas & Cocos Keeling Islands') for t in tick_labels2]
+
+    ax1.bar(np.arange(0, len(unique_countries[i_sort])), n_particles_per_country[i_sort], color=bar_colors,
+           tick_label=tick_labels)
+    ax2.bar(np.arange(0, len(unique_countries[i_sort])), n_particles_per_country[i_sort], color=bar_colors,
+           tick_label=tick_labels)
+    ax1.set_ylim(29000, 45000)  # outliers only
+    ax2.set_ylim(0, 3300)  # most of the data
+
+    ax1.spines['bottom'].set_visible(False) # hide spines between axes
+    ax2.spines['top'].set_visible(False)
+    ax1.xaxis.tick_top()
+    ax1.tick_params(labeltop=False) # don't put tick labels at the top
+    ax2.xaxis.tick_bottom()
+
+    # slanted lines to indicate broken y-axis
+    d = .5  # proportion of vertical to horizontal extent of the slanted line
+    kwargs = dict(marker=[(-1, -d), (1, d)], markersize=12,
+                linestyle="none", color='k', mec='k', mew=1, clip_on=False)
+    ax1.plot([0, 1], [0, 0], transform=ax1.transAxes, **kwargs)
+    ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
+
+    ax2.set_xticklabels(ax2.get_xticklabels(), rotation=90)
+    # ax1.set_yticks([])
+    # ax2.set_yticks([])
+    ax2.set_ylabel('Particles passing', loc='top')
+    ax1.set_ylabel('close to countries [#]', loc='bottom')
+    ax1.grid(False, axis='x')
+    ax2.grid(False, axis='x')
+
+    if output_path:
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    plt.show()
+
 def plastic_measurements(plastic_type='count', output_path=None, plot_style='plot_tools/plot.mplstyle'):
     time_cki, lon_cki, lat_cki, n_plastic_cki, kg_plastic_cki = get_cki_plastic_measurements()
     time_ci, lon_ci, lat_ci, n_plastic_ci, kg_plastic_ci = get_christmas_plastic_measurements()
@@ -768,9 +864,11 @@ if __name__ == '__main__':
     # river_names_ci = ['Tanduy', 'Serayu', 'Wulan', 'Bogowonto']
     # figure2_main_sources(river_names_cki=river_names_cki, river_names_ci=river_names_ci, output_path=get_dir('iot_plots')+'fig2.jpg')
     
-    figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
+    # figure3_release_arrival_histograms(output_path=get_dir('iot_plots')+'fig3.jpg')
     
     # figure4_seasonal_density(output_path=get_dir('iot_plots')+'fig4.jpg')
+
+    figure5_other_countries_affected(output_path=get_dir('iot_plots')+'fig5.jpg')
     
     # output_path = f'{get_dir("animation_output")}iot.geojson'
     # get_kepler_geojson(output_path)

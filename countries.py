@@ -1,5 +1,6 @@
 from utilities import get_closest_index, get_matrix_value_or_nan
 from ocean_utilities import Grid, get_io_lon_lat_range
+from postprocessing_iot import get_cki_box_lon_lat_range, get_christmas_box_lon_lat_range
 import cartopy.io.shapereader as shpreader
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
@@ -52,6 +53,21 @@ class CountriesGridded:
         self.codes_names[india_code_bob] = 'India (BoB)'
         self.countries[i_west,j_west] = india_code_as
         self.countries[i_east,j_east] = india_code_bob
+
+    def extend_iot(self):
+        log.info(None, 'Extending the domain of Christmas Island and the Cocos Keeling Islands.')
+        iot_code = list(self.codes_names.keys())[list(self.codes_names.values()).index('Indian Ocean Territories')]
+        
+        
+        lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
+        lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
+        i_lon_ci = get_closest_index(self.grid.lon, lon_range_ci)
+        i_lat_ci = get_closest_index(self.grid.lat, lat_range_ci)
+        i_lon_cki = get_closest_index(self.grid.lon, lon_range_cki)
+        i_lat_cki = get_closest_index(self.grid.lat, lat_range_cki)
+
+        self.countries[i_lat_ci[0]:i_lat_ci[1], i_lon_ci[0]:i_lon_ci[1]] = iot_code
+        self.countries[i_lat_cki[0]:i_lat_cki[1], i_lon_cki[0]:i_lon_cki[1]] = iot_code
 
     def extend_maldives_cocos(self):
         log.info(None,'Extending the domain of the Maldives and Cocos Keeling Islands.')
