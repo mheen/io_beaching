@@ -20,6 +20,8 @@ import numpy as np
 from datetime import datetime
 import string
 import time
+import shapefile
+from shapely.geometry import Polygon, Point
 
 def get_months_colors():
     colors = ['#ffedbc', '#fece6b', '#fdc374', '#fb9d59', '#f57547', '#d00d20',
@@ -600,13 +602,52 @@ def figure4_seasonal_density(input_path=get_dir('iot_input_density'),
         plt.savefig(output_path,bbox_inches='tight',dpi=300)
     plt.show()
 
+def get_particles_in_indonesian_islands(particles:BeachingParticles, t_start:int, cgrid:CountriesGridded,
+                                        input_file='input/major_indonesian_islands.shp'):
+
+    shp_islands = shapefile.Reader(input_file)
+    indo_code = cgrid.get_country_code_from_name('Indonesia')
+
+    islands = []
+    for p in range(len(particles.pid)):
+        lon = particles.lon[p, t_start:]
+        lat = particles.lat[p, t_start:]
+        l_nonans = np.logical_and(~np.isnan(lon), ~np.isnan(lat))
+        lon = lon[l_nonans]
+        lat = lat[l_nonans]
+
+        i, j = cgrid.grid.get_index(lon, lat)
+        if np.any(cgrid.countries[j.astype(int), i.astype(int)] == indo_code):
+            for shape_record in shp_islands.shapeRecords():
+                name = shape_record.record[1]
+                polygon = Polygon(shape_record.shape.points)
+                l_island = [polygon.contains(Point(lon[k], lat[k])) for k in range(len(lon))]
+                if np.any(l_island):
+                    islands.append(name)
+                else:
+                    continue
+        else:
+            continue
+
+    islands = np.array(islands)
+    unique_islands = np.unique(islands)
+    
+    n_particles_per_island = []
+    for island in unique_islands:
+        n_particles_per_island.append(np.sum(islands==island))
+    n_particles_per_island = np.array(n_particles_per_island)
+
+    i_sort = np.argsort(n_particles_per_island)[::-1] # sort descending
+    i_sort = i_sort[n_particles_per_island[i_sort]>10] # ignore less than 10 particles
+
+    return unique_islands[i_sort], n_particles_per_island[i_sort]
+
 def figure5_other_countries_affected(input_path=get_dir('iot_input'),
                                      river_lons_pts = [109.08001708984375, 110.27996826171875, 108.67999267578125, 108.1199951171875, 110.1199951171875],
                                      river_lats_pts = [-7.800000190734863, -8.119999885559082, -7.800000190734863, -7.880000114440918, -8.039999961853027],
-                                     river_lons = [109.1125, 110.2125, 108.7958333, 108.1458333, 110.0291667],
-                                     river_lats = [-7.679166667, -7.979166667, -7.670833333, -7.779166667, -7.895833333],
-                                     river_names = ['Serayu', 'Progo', 'Tanduy', 'Wulan', 'Bogowonto'],
-                                     output_path=None, plot_style='plot_tools/plot.mplstyle',):
+                                     unique_islands = ['Java', 'Lombok', 'Bali', 'Sumbawa', 'Sumba', 'Sumatra', 'Flores', 'West Timor', 'Sulawesi'],
+                                     n_particles_per_island = np.array([43654, 535, 432, 408, 171, 170, 72, 18, 12]),
+                                     output_path=None, plot_style='plot_tools/plot.mplstyle'):
 
     cgrid_org = CountriesGridded.read_from_netcdf()
     cgrid = cgrid_org.get_countriesgridded_with_halo(halosize=3)
@@ -645,6 +686,12 @@ def figure5_other_countries_affected(input_path=get_dir('iot_input'),
     i_sort = np.argsort(n_particles_per_country)[::-1] # sort descending
     i_sort = i_sort[n_particles_per_country[i_sort]>10] # ignore less than 10 particles
 
+    # calculation below takes a very long time, so don't calculate if values are given
+    if unique_islands is None:
+        unique_islands, n_particles_per_island = get_particles_in_indonesian_islands(river_particles, t_start, cgrid)
+        print(unique_islands)
+        print(n_particles_per_island)
+    
     plt.style.use(plot_style)
     plt.rcParams['font.size'] = 5
     plt.rcParams['axes.labelsize'] = 5
@@ -655,20 +702,26 @@ def figure5_other_countries_affected(input_path=get_dir('iot_input'),
     for n in n_particles_per_country[i_sort]:
         bar_colors.append(colors[np.where(n<ranges)[0][-1]])
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(5, 4))
+    fig = plt.figure(figsize=(6, 4))
+    ax1 = fig.add_subplot(2, 3, (1, 2))
+    ax2 = fig.add_subplot(2, 3, (4, 5), sharex=ax1)
+    ax3 = fig.add_subplot(2, 3, 3)
+    ax4 = fig.add_subplot(2, 3, 6, sharex=ax3)
     fig.subplots_adjust(hspace=0.05)
+    fig.subplots_adjust(wspace=0.2)
 
+    # (a) Plastics arriving in different countries
     tick_labels0 = cgrid.get_country_name(unique_countries[i_sort])
     tick_labels1 = [t.replace('France', 'Reunion') for t in tick_labels0]
     tick_labels2 = [t.replace('British Indian Ocean Territory', 'Chagos Archipelago') for t in tick_labels1]
     tick_labels = [t.replace('Indian Ocean Territories', 'Christmas & Cocos Keeling Islands') for t in tick_labels2]
 
     ax1.bar(np.arange(0, len(unique_countries[i_sort])), n_particles_per_country[i_sort], color=bar_colors,
-           tick_label=tick_labels)
+           tick_label=tick_labels, zorder=3)
     ax2.bar(np.arange(0, len(unique_countries[i_sort])), n_particles_per_country[i_sort], color=bar_colors,
-           tick_label=tick_labels)
-    ax1.set_ylim(29000, 45000)  # outliers only
-    ax2.set_ylim(0, 3300)  # most of the data
+           tick_label=tick_labels, zorder=3)
+    ax1.set_ylim(29000, 45500)  # outliers only
+    ax2.set_ylim(0, 3300) # most of the data
 
     ax1.spines['bottom'].set_visible(False) # hide spines between axes
     ax2.spines['top'].set_visible(False)
@@ -684,12 +737,52 @@ def figure5_other_countries_affected(input_path=get_dir('iot_input'),
     ax2.plot([0, 1], [1, 1], transform=ax2.transAxes, **kwargs)
 
     ax2.set_xticklabels(ax2.get_xticklabels(), rotation=90)
-    # ax1.set_yticks([])
-    # ax2.set_yticks([])
     ax2.set_ylabel('Particles passing', loc='top')
     ax1.set_ylabel('close to countries [#]', loc='bottom')
-    ax1.grid(False, axis='x')
-    ax2.grid(False, axis='x')
+    ax1.grid(False)
+    ax2.grid(False)
+    ax1.grid(True, axis='y', zorder=0)
+    ax2.grid(True, axis='y', zorder=0)
+    
+    anchored_text1 = AnchoredText(f'(a) Countries affected by plastics from 5 main rivers', loc='upper left', borderpad=0.0)
+    ax1.add_artist(anchored_text1)
+
+    # (b) Plastics arriving at Indonesian islands
+    ranges2 = [50000, 500, 250, 100, 50, 10, 0]
+    colors2 = get_colormap_reds(len(ranges)-1)[::-1]
+    bar_colors2 = []
+    for n in n_particles_per_island:
+        bar_colors2.append(colors2[np.where(n<ranges2)[0][-1]])
+
+    ax3.bar(np.arange(0, len(unique_islands)), n_particles_per_island, color=bar_colors2, tick_label=unique_islands, zorder=3)
+    ax4.bar(np.arange(0, len(unique_islands)), n_particles_per_island, color=bar_colors2, tick_label=unique_islands, zorder=3)
+    ax3.set_ylim(29000, 45500)
+    ax4.set_ylim(0, 560)
+
+    ax3.spines['bottom'].set_visible(False) # hide spines between axes
+    ax4.spines['top'].set_visible(False)
+    ax3.xaxis.tick_top()
+    ax3.tick_params(labeltop=False) # don't put tick labels at the top
+    ax4.xaxis.tick_bottom()
+
+    # slanted lines to indicate broken y-axis
+    ax3.plot([0, 1], [0, 0], transform=ax3.transAxes, **kwargs)
+    ax4.plot([0, 1], [1, 1], transform=ax4.transAxes, **kwargs)
+
+    ax4.set_xticklabels(ax4.get_xticklabels(), rotation=90)
+    # ax4.set_ylabel('Particles passing', loc='top')
+    # ax3.set_ylabel('close to islands [#]', loc='bottom')
+    ax3.grid(False)
+    ax4.grid(False)
+    ax3.grid(True, axis='y', zorder=0)
+    ax4.grid(True, axis='y', zorder=0)
+    ax3.yaxis.tick_right()
+    ax3.yaxis.set_label_position('right')
+    ax4.yaxis.tick_right()
+    ax4.yaxis.set_label_position('right')
+    
+    anchored_text2 = AnchoredText(f'(b) Indonesian islands affected', loc='upper left', borderpad=0.0)
+    ax3.add_artist(anchored_text2)
 
     if output_path:
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
