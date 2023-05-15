@@ -58,7 +58,7 @@ class CountriesGridded:
         log.info(None, 'Extending the domain of Christmas Island and the Cocos Keeling Islands.')
         iot_code = list(self.codes_names.keys())[list(self.codes_names.values()).index('Indian Ocean Territories')]
         
-        
+
         lon_range_ci, lat_range_ci = get_christmas_box_lon_lat_range()
         lon_range_cki, lat_range_cki = get_cki_box_lon_lat_range()
         i_lon_ci = get_closest_index(self.grid.lon, lon_range_ci)
@@ -129,6 +129,11 @@ class CountriesGridded:
             if ~np.isnan(lon_index[i]):
                 country_codes[i] = get_matrix_value_or_nan(self.countries,lat_index[i],lon_index[i])
         return country_codes
+
+    def get_country_code_from_name(self, req_name):
+        for code, name in self.codes_names.items():
+            if name == req_name:
+                return code
 
     def get_country_name(self,code):
         if isinstance(code,int) or isinstance(code,float):
