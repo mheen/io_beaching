@@ -261,7 +261,7 @@ class BeachingParticles():
         return p_first,t_release
 
     def label_stuck_on_land_but_do_not_freeze(self,lon,lat,beached):
-        lm = HycomLandMask.read_from_netcdf()
+        lm = LandMask.read_from_netcdf()
         mask = np.empty(lon.shape)*np.nan
         # get stuck particles
         for t in range(lon.shape[1]):
@@ -274,7 +274,7 @@ class BeachingParticles():
     def get_stuck_on_land(self,lon,lat,beached,allow_beaching_after_n_days):
         '''Finds particles that are already stuck on land during simulation.
         Marked as "2" in beached matrix.'''
-        lm = HycomLandMask.read_from_netcdf()
+        lm = LandMask.read_from_netcdf()
         mask = np.empty(lon.shape)*np.nan
         # get stuck particles
         for t in range(lon.shape[1]):
