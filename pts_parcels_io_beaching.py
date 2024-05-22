@@ -22,9 +22,10 @@ class IORiverParticles:
 
     @staticmethod
     def get_from_netcdf(start_date,constant_release=False,
-                        input_path='input/PlasticRiverSources_Lebreton2017_Hycom.nc'):
+                        input_path='input/PlasticRiverSources_Lebreton2017_Hycom.nc',
+                        ocean_basin='io'):
         global_sources = RiverSources.read_from_netcdf(input_path=input_path)
-        io_sources = global_sources.get_riversources_from_ocean_basin('io')
+        io_sources = global_sources.get_riversources_from_ocean_basin(ocean_basin)
         year = start_date.year
         day = start_date.day
         hour = start_date.hour
@@ -97,13 +98,54 @@ def _get_io_indices_from_netcdf(input_path='input/hycom_landmask.nc',lon_range=[
     indices = {'lon' : range(i_lon_start,i_lon_end), 'lat': range(i_lat_start,i_lat_end)}
     return indices
 
+def run_hycom_ww3_subset_monthly_release(output_dir, output_name,
+                                         time0, lon0, lat0, start_date, end_date,
+                                         input_dir_hycom=get_dir('hycom_input'),
+                                         input_dir_ww3=get_dir('ww3_input'),
+                                         indices_hycom=_get_io_indices_from_netcdf(),
+                                         indices_ww3=_get_io_indices_from_netcdf(input_path=f'{get_dir("ww3_input")}20080101.nc'),
+                                         kh=10., interp_method='linear'):
+    # get paths
+    ncfiles_hycom = get_daily_ncfiles_in_time_range(input_dir_hycom, start_date, end_date)
+    ncfiles_cfsr = get_daily_ncfiles_in_time_range(input_dir_ww3, start_date, end_date)
+    output_path = output_dir+output_name
+    # create fieldset
+    filenames_hycom = [input_dir_hycom+ncfile for ncfile in ncfiles_hycom]
+    filenames_ww3 = [input_dir_ww3+ncfile for ncfile in ncfiles_cfsr]
+    variables_hycom = {'U':'u', 'V':'v'}
+    variables_ww3 = {'U':'u','V':'v'}
+    dimensions_hycom = {'lat':'lat','lon':'lon','time':'time'}
+    dimensions_ww3 = {'lat':'lat','lon':'lon','time':'time'}
+    fset_hycom = FieldSet.from_netcdf(filenames_hycom, variables_hycom, dimensions_hycom, indices=indices_hycom)
+    fset_ww3 = FieldSet.from_netcdf(filenames_ww3, variables_ww3, dimensions_ww3, indices=indices_ww3)
+    fset = FieldSet(U=fset_hycom.U+fset_ww3.U, V=fset_hycom.V+fset_ww3.V)
+    # add constant horizontal diffusivity (zero on land)
+    lm = LandMask.read_from_netcdf()    
+    kh2D = kh*np.ones(lm.mask.shape)
+    kh2D[lm.mask.astype('bool')] = 0.0 # diffusion zero on land    
+    kh2D_subset = kh2D[indices_hycom['lat'],:][:,indices_hycom['lon']]
+    fset.add_field(Field('Kh_zonal', data=kh2D_subset, lon=fset_hycom.U.grid.lon, lat=fset_hycom.U.grid.lat,
+                         mesh='spherical', interp_method=interp_method))
+    fset.add_field(Field('Kh_meridional', data=kh2D_subset, lon=fset_hycom.U.grid.lon, lat=fset_hycom.U.grid.lat,
+                         mesh='spherical', interp_method=interp_method))
+    # monthly release
+    pset = ParticleSet(fieldset=fset, pclass=JITParticle, lon=lon0, lat=lat0, time=time0)
+    # execute
+    run_time = timedelta(days=(end_date-start_date).days)
+    dt = timedelta(hours=1)
+    output_interval = 24    
+    kernel = pset.Kernel(AdvectionRK4) + pset.Kernel(DiffusionUniformKh)
+    output_file = pset.ParticleFile(name=output_path,outputdt=dt*output_interval)
+    pset.execute(kernel,runtime=run_time,dt=dt,output_file=output_file,verbose_progress=True,
+                 recovery={ErrorCode.ErrorOutOfBounds: delete_particle})
+
 def run_hycom_cfsr_subset_monthly_release(output_dir, output_name,
                                           time0, lon0, lat0, start_date, end_date,
                                           windage=0.03,
                                           input_dir_hycom=get_dir('hycom_input'),
                                           input_dir_cfsr=get_dir('cfsr_input'),
                                           indices_hycom=_get_io_indices_from_netcdf(),
-                                          indices_cfsr=_get_io_indices_from_netcdf(input_path=get_dir('cfsr_indices_input')),
+                                          indices_cfsr=_get_io_indices_from_netcdf(input_path=f'{get_dir("cfsr_input")}19950101.nc'),
                                           kh=10., interp_method='linear'):
     # get paths
     ncfiles_hycom = get_daily_ncfiles_in_time_range(input_dir_hycom, start_date, end_date)
