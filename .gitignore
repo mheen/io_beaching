@@ -1,4 +1,5 @@
 dirs.json
+*.xlsx
 *.txt
 *.png
 *.jpg
