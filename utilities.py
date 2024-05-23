@@ -163,14 +163,13 @@ def get_index_closest_point(lon, lat, lon0, lat0, n_closest=1):
         distance.append(get_distance_between_points(lon[i], lat[i], lon0, lat0))
     distance = np.array(distance)
     i_closest = np.where(distance == np.nanmin(distance))[0][0]
-    i_remove = i_closest
-    i_closest = [i_closest]
+    i_closest_list = [i_closest]
     while n_closest > 1:
-        distance = np.delete(distance, i_remove)
-        i_remove = np.where(distance == np.nanmin(distance))[0][0]
-        i_closest.append(i_remove)        
+        distance[i_closest] = np.nanmax(distance) # increasing closest distance to find other nearby points
+        i_closest = np.where(distance == np.nanmin(distance))[0][0]
+        i_closest_list.append(i_closest)
         n_closest -= 1
-    return i_closest
+    return i_closest_list
 
 def convert_lon_360_to_180(lon):
     lon[lon>180] = lon[lon>180]-360
