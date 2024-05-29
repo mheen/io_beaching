@@ -1,12 +1,14 @@
 from plastic_sources import RiverSources
-from particles import BeachingParticles
+from particles import BeachingParticles, Density
+from processing import _write_to_netcdf, _write_density_to_netcdf
 from utilities import get_index_closest_point, get_dir
+from ocean_utilities import get_global_grid
 import numpy as np
 import pandas as pd
 
 def get_iot_lon_lat_range():
     lon_range = [90., 128.]
-    lat_range = [-20., 6.]
+    lat_range = [-20., 20.]
     return (lon_range, lat_range)
 
 def get_iot_sources(original=False):
@@ -15,7 +17,7 @@ def get_iot_sources(original=False):
         global_sources = RiverSources.read_from_netcdf()
     else:
         global_sources = RiverSources.read_from_shapefile()
-    io_sources = global_sources.get_riversources_from_ocean_basin('io')
+    io_sources = global_sources.get_riversources_from_ocean_basin('io_indo')
     iot_sources = io_sources.get_riversources_in_lon_lat_range(iot_lon, iot_lat)
     return iot_sources
 
@@ -46,10 +48,10 @@ def get_cki_plastic_measurements(input_path=get_dir('iot_measurements')):
     return time[l_cki], lon[l_cki], lat[l_cki], n_plastic[l_cki], kg_plastic[l_cki]
 
 def get_iot_plastic_measurements(input_path=get_dir('iot_measurements')):
-    df = pd.read_excel(input_path, sheet_name='Event_details', skiprows=5)
+    df = pd.read_excel(input_path, sheet_name='Event details', skiprows=5)
     time = np.array([d.to_pydatetime() for d in df['Date']])
     lon = np.array(df['Longitude'])
-    lat = np.array(df['Latitude'])
+    lat = np.array(df['latitude'])
     n_plastic = np.array(df['Total'])
     kg_plastic = np.array(df['Weight Kg'])
     return time, lon, lat, n_plastic, kg_plastic
@@ -133,3 +135,32 @@ def get_n_particles_per_month_release_arrival(particles: BeachingParticles, iot_
     for i in range(len(entry_months)):
         n_entry_per_release_month[entry_months[i]-1, release_months[i]-1] += 1
     return np.array(n_release), np.array(n_entry), n_entry_per_release_month
+
+if __name__ == '__main__':
+    tms = ['', '_stokes', '_3pwindage']
+    for tm in tms:
+        input_file = f'neutral_iod_2008-2009{tm}_indonesian-sources.nc'
+        output_particles = f'iot_particles_2008-2009{tm}_indonesian-sources.nc'
+        output_density = f'iot_density_2008-2009{tm}_indonesian-sources.nc'
+        
+        lon_range = [90., 128.]
+        lat_range = [-20., 6.]
+        
+        dx = 0.5
+        
+        input_dir = get_dir('pts_output')
+        output_dir = get_dir('pts_processed')
+        
+        particles = BeachingParticles.read_from_parcels_netcdf(f'{input_dir}{input_file}', t_interval=1)
+        l_lon = np.any(np.logical_and(lon_range[0]<=particles.lon, particles.lon<=lon_range[1]), axis=1)
+        l_lat = np.any(np.logical_and(lat_range[0]<=particles.lat, particles.lat<=lat_range[1]), axis=1)
+        l_box = np.logical_and(l_lon, l_lat)
+        pid = particles.pid[l_box]
+        lon = particles.lon[l_box]
+        lat = particles.lat[l_box]
+        beached = particles.beached[l_box]
+        particles_iot = BeachingParticles(pid, particles.time, lon, lat, beached, particles.t_interval)
+        _write_to_netcdf(particles_iot, f'{output_dir}{output_particles}')
+        grid = get_global_grid(dx=dx)
+        density = Density.create_from_particles(grid, particles_iot)
+        _write_density_to_netcdf(density, f'{output_dir}{output_density}')
